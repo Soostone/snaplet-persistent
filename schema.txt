@@ -1,0 +1,22 @@
+SnapAuthUser
+  login Text 
+  password Text
+  email Text default=''
+  activatedAt UTCTime Maybe default=now()
+  suspendedAt UTCTime Maybe default=now()
+  rememberToken Text Maybe
+  loginCount Int
+  failedLoginCount Int
+  lockedOutUntil UTCTime Maybe default=now()
+  currentLoginAt UTCTime Maybe default=now()
+  lastLoginAt UTCTime Maybe default=now()
+  currentIp Text Maybe
+  lastIp Text Maybe 
+  createdAt UTCTime default=now()
+  updatedAt UTCTime default=now()
+  roles String
+  meta String
+  UniqueUserName login
+  apiToken Text default=''
+  resetToken Text Maybe
+  resetRequestedAt UTCTime Maybe
