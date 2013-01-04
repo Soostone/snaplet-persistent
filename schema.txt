@@ -1,7 +1,7 @@
 SnapAuthUser
   login Text 
-  password Text
   email Text default=''
+  password Text
   activatedAt UTCTime Maybe default=now()
   suspendedAt UTCTime Maybe default=now()
   rememberToken Text Maybe
@@ -14,9 +14,7 @@ SnapAuthUser
   lastIp Text Maybe 
   createdAt UTCTime default=now()
   updatedAt UTCTime default=now()
-  roles String
-  meta String
-  UniqueUserName login
-  apiToken Text default=''
   resetToken Text Maybe
   resetRequestedAt UTCTime Maybe
+  roles String
+  meta String

@@ -8,6 +8,7 @@ import Control.Monad.Trans.Resource
 import Data.Configurator
 import Database.Persist.Postgresql hiding (get)
 import Snap.Snaplet
+import Paths_snaplet_persistent
 -------------------------------------------------------------------------------
 
 
@@ -17,10 +18,13 @@ newtype PersistState = PersistState { persistPool :: ConnectionPool }
 
 -------------------------------------------------------------------------------
 initPersist :: Migration (SqlPersist IO) -> SnapletInit b PersistState
-initPersist migration = makeSnaplet "persist" "Snaplet for persistent DB library" Nothing $ do
+initPersist migration = makeSnaplet "persist" description datadir $ do
     p <- mkSnapletPgPool
     liftIO $ runSqlPool (runMigrationUnsafe migration) p
     return $ PersistState p
+  where
+    description = "Snaplet for persistent DB library"
+    datadir = Just $ liftM (++"/resources/db") getDataDir
 
 
 -------------------------------------------------------------------------------

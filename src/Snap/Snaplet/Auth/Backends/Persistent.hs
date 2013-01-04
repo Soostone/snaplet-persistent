@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyDataDecls    #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -8,11 +9,13 @@
 
 module Snap.Snaplet.Auth.Backends.Persistent
     ( SnapAuthUser
-    , migrateAll
+    , migrateAuth
     , initPersistAuthManager
+    , initPersistAuthManager'
     , userDBKey
     , db2au ) where
 
+import           Control.Monad
 import           Control.Monad.State          (liftIO)
 import           Control.Monad.Trans.Resource
 import qualified Data.HashMap.Strict          as HM
@@ -31,9 +34,10 @@ import           Snap.Snaplet
 import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Session
 import           Web.ClientSession            (getKey)
+import           Paths_snaplet_persistent
 
 
-share [mkPersist sqlSettings, mkMigrate "migrateAll"]
+share [mkPersist sqlSettings, mkMigrate "migrateAuth"]
    $(persistFileWith upperCaseSettings "schema.txt")
 
 
@@ -70,27 +74,50 @@ data PersistAuthManager = PAM {
 
 
 -------------------------------------------------------------------------------
--- |
-initPersistAuthManager :: AuthSettings
-                       -> SnapletLens b SessionManager
+-- | Initializer that gets AuthSettings from a config file.
+initPersistAuthManager :: SnapletLens b SessionManager
                        -> ConnectionPool
                        -> SnapletInit b (AuthManager b)
-initPersistAuthManager aus l pool =
-  makeSnaplet "PersistAuthManager"
-              "A snaplet providing user authentication support using Persist"
-              Nothing $ liftIO $ do
-  key  <- getKey (asSiteKey aus)
-  rng <- liftIO mkRNG
-  return $ AuthManager {
-                 backend = PAM pool
-               , session = l
-               , activeUser = Nothing
-               , minPasswdLen = asMinPasswdLen aus
-               , rememberCookieName = asRememberCookieName aus
-               , rememberPeriod = asRememberPeriod aus
-               , siteKey = key
-               , lockout = asLockout aus
-               , randomNumberGenerator = rng }
+initPersistAuthManager l pool = make $ do
+    aus <- authSettingsFromConfig
+    initHelper aus l pool
+
+
+
+-------------------------------------------------------------------------------
+-- |
+initPersistAuthManager' :: AuthSettings
+                        -> SnapletLens b SessionManager
+                        -> ConnectionPool
+                        -> SnapletInit b (AuthManager b)
+initPersistAuthManager' aus l pool = make $ initHelper aus l pool
+
+
+make :: Initializer b v v -> SnapletInit b v
+make = makeSnaplet "PersistAuthManager" description datadir
+  where
+    description =
+      "A snaplet providing user authentication support using Persist"
+    datadir = Just $ liftM (++"/resources/auth") getDataDir
+
+
+initHelper :: AuthSettings
+           -> SnapletLens b SessionManager
+           -> ConnectionPool
+           -> Initializer b (AuthManager b) (AuthManager b)
+initHelper aus l pool = liftIO $ do
+    key  <- getKey (asSiteKey aus)
+    rng <- liftIO mkRNG
+    return $ AuthManager {
+                   backend = PAM pool
+                 , session = l
+                 , activeUser = Nothing
+                 , minPasswdLen = asMinPasswdLen aus
+                 , rememberCookieName = asRememberCookieName aus
+                 , rememberPeriod = asRememberPeriod aus
+                 , siteKey = key
+                 , lockout = asLockout aus
+                 , randomNumberGenerator = rng }
 
 
 
@@ -113,31 +140,60 @@ userDBKey au = case userId au of
 
 
 -------------------------------------------------------------------------------
+textPassword :: Password -> Text
+textPassword (Encrypted bs) = T.decodeUtf8 bs
+textPassword (ClearText bs) = T.decodeUtf8 bs
+
+
+-------------------------------------------------------------------------------
 -- |
 instance IAuthBackend PersistAuthManager where
-  save PAM{..} au@AuthUser{..} = runDB pamPool $ do
-    case userId of
-      Nothing -> fail "Can't create user through the Auth snaplet here."
-      Just (UserId t) -> do
-        let k = (mkKey (readT t :: Int))
-        now <- liftIO getCurrentTime
-        update k $ catMaybes
-          [ Just $ SnapAuthUserLogin =. userLogin
-          , fmap (\ (Encrypted p) -> SnapAuthUserPassword =. T.decodeUtf8 p) userPassword
-          , Just $ SnapAuthUserActivatedAt =. userActivatedAt
-          , Just $ SnapAuthUserSuspendedAt =. userSuspendedAt
-          , Just $ SnapAuthUserRememberToken =. userRememberToken
-          , Just $ SnapAuthUserLoginCount =. userLoginCount
-          , Just $ SnapAuthUserFailedLoginCount =. userFailedLoginCount
-          , Just $ (SnapAuthUserLockedOutUntil =.) userLockedOutUntil
-          , Just $ (SnapAuthUserCurrentLoginAt =.) userCurrentLoginAt
-          , Just $ (SnapAuthUserLastLoginAt =.) userLastLoginAt
-          , Just $ SnapAuthUserCurrentIp =. (T.decodeUtf8 `fmap` userCurrentLoginIp)
-          , Just $ (SnapAuthUserLastIp =.) (T.decodeUtf8 `fmap` userLastLoginIp)
-          , fmap (SnapAuthUserCreatedAt =.) userCreatedAt
-          , Just $ SnapAuthUserUpdatedAt =. now
-          ]
-        return $ Right $ au {userUpdatedAt = Just now}
+  save PAM{..} au@AuthUser{..} = do
+    now <- liftIO getCurrentTime
+    pw <- encryptPassword $ fromMaybe (ClearText "") userPassword
+    runDB pamPool $ do
+      case userId of
+        Nothing -> do
+          insert $ SnapAuthUser
+            userLogin
+            (fromMaybe "" userEmail)
+            (textPassword pw)
+            userActivatedAt
+            userSuspendedAt
+            userRememberToken
+            userLoginCount
+            userFailedLoginCount
+            userLockedOutUntil
+            userCurrentLoginAt
+            userLastLoginAt
+            (fmap T.decodeUtf8 userCurrentLoginIp)
+            (fmap T.decodeUtf8 userLastLoginIp)
+            now
+            now
+            Nothing
+            Nothing
+            ""
+            ""
+          return $ Right $ au {userUpdatedAt = Just now}
+        Just (UserId t) -> do
+          let k = (mkKey (readT t :: Int))
+          update k $ catMaybes
+            [ Just $ SnapAuthUserLogin =. userLogin
+            , fmap (\ (Encrypted p) -> SnapAuthUserPassword =. T.decodeUtf8 p) userPassword
+            , Just $ SnapAuthUserActivatedAt =. userActivatedAt
+            , Just $ SnapAuthUserSuspendedAt =. userSuspendedAt
+            , Just $ SnapAuthUserRememberToken =. userRememberToken
+            , Just $ SnapAuthUserLoginCount =. userLoginCount
+            , Just $ SnapAuthUserFailedLoginCount =. userFailedLoginCount
+            , Just $ (SnapAuthUserLockedOutUntil =.) userLockedOutUntil
+            , Just $ (SnapAuthUserCurrentLoginAt =.) userCurrentLoginAt
+            , Just $ (SnapAuthUserLastLoginAt =.) userLastLoginAt
+            , Just $ SnapAuthUserCurrentIp =. (T.decodeUtf8 `fmap` userCurrentLoginIp)
+            , Just $ (SnapAuthUserLastIp =.) (T.decodeUtf8 `fmap` userLastLoginIp)
+            , fmap (SnapAuthUserCreatedAt =.) userCreatedAt
+            , Just $ SnapAuthUserUpdatedAt =. now
+            ]
+          return $ Right $ au {userUpdatedAt = Just now}
 
 
   destroy = fail "We don't allow destroying users."
