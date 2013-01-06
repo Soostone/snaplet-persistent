@@ -47,6 +47,7 @@ Library
     persistent                 >= 1.1     && < 1.2,
     persistent-postgresql      >= 1.1     && < 1.2,
     persistent-template        >= 1.1     && < 1.2,
+    readable                   >= 0.1     && < 0.2,
     resource-pool-catchio      >= 0.2     && < 0.3,
     resourcet                  >= 0.4     && < 0.5,
     safe                       >= 0.3     && < 0.4,
