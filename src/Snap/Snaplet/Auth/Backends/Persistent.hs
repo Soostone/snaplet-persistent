@@ -8,12 +8,8 @@
 
 
 module Snap.Snaplet.Auth.Backends.Persistent
-    ( SnapAuthUser
-    , migrateAuth
-    , initPersistAuthManager
-    , initPersistAuthManager'
-    , userDBKey
-    , db2au ) where
+    ( module Snap.Snaplet.Auth.Backends.Persistent
+    ) where
 
 import           Control.Monad
 import           Control.Monad.State          (liftIO)
@@ -27,11 +23,11 @@ import           Data.Time
 import           Database.Persist
 import           Database.Persist.Postgresql
 import           Database.Persist.Quasi
-import           Database.Persist.Store
 import           Database.Persist.TH         hiding (derivePersistField)
 import           Safe
 import           Snap.Snaplet
 import           Snap.Snaplet.Auth
+import           Snap.Snaplet.Persistent
 import           Snap.Snaplet.Session
 import           Web.ClientSession            (getKey)
 import           Paths_snaplet_persistent
@@ -212,12 +208,4 @@ instance IAuthBackend PersistAuthManager where
   lookupByRememberToken PAM{..} token = runDB pamPool $ do
       res <- selectFirst [SnapAuthUserRememberToken ==. Just token] []
       return $ fmap db2au res
-
-
-mkKey :: Int -> Key entity                   
-mkKey = Key . toPersistValue                 
-
-fromPersistValue' :: PersistField c => PersistValue -> c
-fromPersistValue' = either (const $ abort "Persist conversion failed") id
-                    . fromPersistValue 
 
