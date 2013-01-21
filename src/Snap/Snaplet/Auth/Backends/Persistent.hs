@@ -90,7 +90,7 @@ initPersistAuthManager' aus l pool = make $ initHelper aus l pool
 
 
 make :: Initializer b v v -> SnapletInit b v
-make = makeSnaplet "PersistAuthManager" description datadir
+make = makeSnaplet "persist-auth" description datadir
   where
     description =
       "A snaplet providing user authentication support using Persist"
