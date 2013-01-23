@@ -175,6 +175,7 @@ instance IAuthBackend PersistAuthManager where
           let k = (mkKey (readT t :: Int))
           update k $ catMaybes
             [ Just $ SnapAuthUserLogin =. userLogin
+            , Just $ SnapAuthUserEmail =. fromMaybe "" userEmail
             , fmap (\ (Encrypted p) -> SnapAuthUserPassword =. T.decodeUtf8 p) userPassword
             , Just $ SnapAuthUserActivatedAt =. userActivatedAt
             , Just $ SnapAuthUserSuspendedAt =. userSuspendedAt
@@ -188,6 +189,9 @@ instance IAuthBackend PersistAuthManager where
             , Just $ (SnapAuthUserLastIp =.) (T.decodeUtf8 `fmap` userLastLoginIp)
             , fmap (SnapAuthUserCreatedAt =.) userCreatedAt
             , Just $ SnapAuthUserUpdatedAt =. now
+            , Just $ SnapAuthUserResetToken =. userResetToken
+            , Just $ SnapAuthUserResetRequestedAt =. userResetRequestedAt
+            , Just $ SnapAuthUserRoles =. show userRoles
             ]
           return $ Right $ au {userUpdatedAt = Just now}
 
