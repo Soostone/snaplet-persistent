@@ -11,6 +11,7 @@ module Snap.Snaplet.Auth.Backends.Persistent
     ( module Snap.Snaplet.Auth.Backends.Persistent
     ) where
 
+-------------------------------------------------------------------------------
 import           Control.Monad
 import           Control.Monad.State          (liftIO)
 import           Control.Monad.Trans.Resource
@@ -21,20 +22,36 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
 import           Database.Persist
+import           Database.Persist.EntityDef
 import           Database.Persist.Postgresql
 import           Database.Persist.Quasi
-import           Database.Persist.TH         hiding (derivePersistField)
+import           Database.Persist.TH          hiding (derivePersistField)
+import           Paths_snaplet_persistent
 import           Safe
 import           Snap.Snaplet
 import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Persistent
 import           Snap.Snaplet.Session
 import           Web.ClientSession            (getKey)
-import           Paths_snaplet_persistent
+-------------------------------------------------------------------------------
+
+
+-- | The list of entity definitions this snaplet exposes. You need
+-- them so that you can append to your application's list of
+-- entity definitions and perform the migration in one block.
+--
+-- See how this example combined an app's own entity definitions and
+-- the auth snaplet's in one migration block:
+--
+-- > share [mkMigrate "migrateAll"] $
+-- >    authEntityDefs ++
+-- >    $(persistFileWith lowerCaseSettings "schema.txt")
+authEntityDefs :: [EntityDef]
+authEntityDefs = $(persistFileWith lowerCaseSettings "schema.txt")
 
 
 share [mkPersist sqlSettings, mkMigrate "migrateAuth"]
-   $(persistFileWith lowerCaseSettings "schema.txt")
+      $(persistFileWith lowerCaseSettings "schema.txt")
 
 
 -------------------------------------------------------------------------------
