@@ -30,7 +30,8 @@ newtype PersistState = PersistState { persistPool :: ConnectionPool }
 -- calling migrations upfront right after initialization.
 --
 -- Example:
--- > initPersist (runMigration migrateAll)
+--
+-- > initPersist (runMigrationUnsafe migrateAll)
 -- 
 -- where migrateAll is the migration function that was auto-generated
 -- by the QQ statement in your persistent schema definition in the
