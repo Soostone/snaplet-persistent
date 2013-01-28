@@ -51,7 +51,7 @@ Library
     resource-pool-catchio      >= 0.2     && < 0.3,
     resourcet                  >= 0.4     && < 0.5,
     safe                       >= 0.3     && < 0.4,
-    snap                       >= 0.10    && < 0.11,
+    snap                       >= 0.11    && < 0.12,
     text                       >= 0.11    && < 0.12,
     time                       >= 1.1     && < 1.5,
     transformers               >= 0.2     && < 0.4,
