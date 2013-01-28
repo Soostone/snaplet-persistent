@@ -34,7 +34,7 @@ import           Paths_snaplet_persistent
 
 
 share [mkPersist sqlSettings, mkMigrate "migrateAuth"]
-   $(persistFileWith upperCaseSettings "schema.txt")
+   $(persistFileWith lowerCaseSettings "schema.txt")
 
 
 -------------------------------------------------------------------------------
