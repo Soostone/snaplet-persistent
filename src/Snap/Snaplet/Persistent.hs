@@ -25,10 +25,20 @@ newtype PersistState = PersistState { persistPool :: ConnectionPool }
 
 
 -------------------------------------------------------------------------------
-initPersist :: Migration (SqlPersist IO) -> SnapletInit b PersistState
+-- | Initialize Persistent with an initial SQL function called right
+-- after the connection pool has been created. This is most useful for
+-- calling migrations upfront right after initialization.
+--
+-- Example:
+-- > initPersist (runMigration migrateAll)
+-- 
+-- where migrateAll is the migration function that was auto-generated
+-- by the QQ statement in your persistent schema definition in the
+-- call to 'mkMigrate'.
+initPersist :: SqlPersist IO a -> SnapletInit b PersistState
 initPersist migration = makeSnaplet "persist" description datadir $ do
     p <- mkSnapletPgPool
-    liftIO $ runSqlPool (runMigrationUnsafe migration) p
+    liftIO $ runSqlPool migration p
     return $ PersistState p
   where
     description = "Snaplet for persistent DB library"
