@@ -12,6 +12,7 @@ import           Data.Readable
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import           Data.Word
 import           Database.Persist.Postgresql hiding (get)
 import           Database.Persist.Store
 import           Snap.Snaplet
@@ -78,6 +79,11 @@ showKeyBS = T.encodeUtf8 . showKey
 -------------------------------------------------------------------------------
 mkInt :: Key a -> Int
 mkInt = fromPersistValue' . unKey
+
+
+-------------------------------------------------------------------------------
+mkWord64 :: Key a -> Word64
+mkWord64 = fromPersistValue' . unKey
 
 
 -------------------------------------------------------------------------------
