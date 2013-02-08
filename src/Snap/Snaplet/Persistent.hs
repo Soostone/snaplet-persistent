@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Snap.Snaplet.Persistent where
@@ -22,6 +23,14 @@ import           Paths_snaplet_persistent
 
 -------------------------------------------------------------------------------
 newtype PersistState = PersistState { persistPool :: ConnectionPool }
+
+
+class MonadIO m => HasPersistPool m where
+    getPersistPool :: m ConnectionPool
+
+
+instance HasPersistPool (Handler b PersistState) where
+    getPersistPool = gets persistPool
 
 
 -------------------------------------------------------------------------------
@@ -56,9 +65,9 @@ mkSnapletPgPool = do
 
 
 -------------------------------------------------------------------------------
-runPersist :: SqlPersist (ResourceT IO) a -> Handler b (PersistState) a
+runPersist :: HasPersistPool m => SqlPersist (ResourceT IO) a -> m a
 runPersist action = do
-  pool <- gets persistPool
+  pool <- getPersistPool
   liftIO . runResourceT $ runSqlPool action pool
 
 
