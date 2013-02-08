@@ -5,6 +5,7 @@ module Snap.Snaplet.Persistent where
 
 -------------------------------------------------------------------------------
 import           Control.Monad.State
+import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
 import           Data.ByteString (ByteString)
 import           Data.Configurator
@@ -31,6 +32,10 @@ class MonadIO m => HasPersistPool m where
 
 instance HasPersistPool (Handler b PersistState) where
     getPersistPool = gets persistPool
+
+
+instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
+    getPersistPool = ask
 
 
 -------------------------------------------------------------------------------
