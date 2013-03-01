@@ -11,7 +11,7 @@ module Snap.Snaplet.Auth.Backends.Persistent
     ( module Snap.Snaplet.Auth.Backends.Persistent
     ) where
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 import           Control.Monad
 import           Control.Monad.State          (liftIO)
 import           Control.Monad.Trans.Resource
@@ -26,6 +26,7 @@ import           Database.Persist.EntityDef
 import           Database.Persist.Postgresql
 import           Database.Persist.Quasi
 import           Database.Persist.TH          hiding (derivePersistField)
+import           Heist.Compiled
 import           Paths_snaplet_persistent
 import           Safe
 import           Snap.Snaplet
@@ -33,9 +34,10 @@ import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Persistent
 import           Snap.Snaplet.Session
 import           Web.ClientSession            (getKey)
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 
 
+------------------------------------------------------------------------------
 -- | The list of entity definitions this snaplet exposes. You need
 -- them so that you can append to your application's list of
 -- entity definitions and perform the migration in one block.
@@ -54,8 +56,10 @@ share [mkPersist sqlSettings, mkMigrate "migrateAuth"]
       $(persistFileWith lowerCaseSettings "schema.txt")
 
 
--------------------------------------------------------------------------------
-db2au :: Entity (SnapAuthUserGeneric t) -> AuthUser
+------------------------------------------------------------------------------
+-- | Function to convert a 'SnapAuthUser' entity into the auth snaplet's
+-- AuthUser type.
+db2au :: Entity SnapAuthUser -> AuthUser
 db2au (Entity (Key k) SnapAuthUser{..}) = AuthUser
   { userId               = Just . UserId . fromPersistValue' $ k
   , userLogin            = snapAuthUserLogin
@@ -81,12 +85,20 @@ db2au (Entity (Key k) SnapAuthUser{..}) = AuthUser
   }
 
 
+------------------------------------------------------------------------------
+-- | Splices for 'SnapAuthUser' that are equivalent to the ones for
+-- 'AuthUser'.
+dbUserSplices :: Monad n
+              => [(Text, Promise (Entity SnapAuthUser) -> Splice n)]
+dbUserSplices = repromise (return . db2au) userCSplices
+
+
 data PersistAuthManager = PAM {
       pamPool :: ConnectionPool
       }
 
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 -- | Initializer that gets AuthSettings from a config file.
 initPersistAuthManager :: SnapletLens b SessionManager
                        -> ConnectionPool
@@ -97,8 +109,8 @@ initPersistAuthManager l pool = make $ do
 
 
 
--------------------------------------------------------------------------------
--- |
+------------------------------------------------------------------------------
+-- | Initializer that lets you specify AuthSettings.
 initPersistAuthManager' :: AuthSettings
                         -> SnapletLens b SessionManager
                         -> ConnectionPool
@@ -134,7 +146,7 @@ initHelper aus l pool = liftIO $ do
 
 
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 -- | Run a database action
 runDB :: ConnectionPool -> SqlPersist (ResourceT IO) a -> IO a
 runDB cp f = runResourceT $ runSqlPool f cp
@@ -144,7 +156,7 @@ readT :: Text -> Int
 readT = readNote "Can't read text" . T.unpack
 
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 -- | Get the db key from an 'AuthUser'
 userDBKey :: AuthUser -> Maybe SnapAuthUserId
 userDBKey au = case userId au of
@@ -152,13 +164,13 @@ userDBKey au = case userId au of
                  Just (UserId k) -> Just . mkKey $ (readT k :: Int)
 
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 textPassword :: Password -> Text
 textPassword (Encrypted bs) = T.decodeUtf8 bs
 textPassword (ClearText bs) = T.decodeUtf8 bs
 
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 -- |
 instance IAuthBackend PersistAuthManager where
   save PAM{..} au@AuthUser{..} = do
@@ -193,7 +205,8 @@ instance IAuthBackend PersistAuthManager where
           update k $ catMaybes
             [ Just $ SnapAuthUserLogin =. userLogin
             , Just $ SnapAuthUserEmail =. fromMaybe "" userEmail
-            , fmap (\ (Encrypted p) -> SnapAuthUserPassword =. T.decodeUtf8 p) userPassword
+            , fmap (\ (Encrypted p) -> SnapAuthUserPassword =. T.decodeUtf8 p)
+                   userPassword
             , Just $ SnapAuthUserActivatedAt =. userActivatedAt
             , Just $ SnapAuthUserSuspendedAt =. userSuspendedAt
             , Just $ SnapAuthUserRememberToken =. userRememberToken

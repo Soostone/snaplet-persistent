@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module Snap.Snaplet.Persistent where
 
@@ -9,13 +10,16 @@ import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
 import           Data.ByteString (ByteString)
 import           Data.Configurator
+import           Data.Configurator.Types
 import           Data.Maybe
 import           Data.Readable
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Word
+import           Database.Persist.GenericSql.Raw
 import           Database.Persist.Postgresql hiding (get)
+import qualified Database.Persist.Postgresql as DB
 import           Database.Persist.Store
 import           Snap.Snaplet
 import           Paths_snaplet_persistent
@@ -61,12 +65,18 @@ initPersist migration = makeSnaplet "persist" description datadir $ do
 
 
 -------------------------------------------------------------------------------
-mkSnapletPgPool :: (MonadIO (m b v), MonadSnaplet m) => m b v ConnectionPool
-mkSnapletPgPool = do
-  conf <- getSnapletUserConfig
+mkPgPool :: MonadIO m => Config -> m ConnectionPool
+mkPgPool conf = do
   pgConStr <- liftIO $ require conf "postgre-con-str"
   cons <- liftIO $ require conf "postgre-pool-size"
   createPostgresqlPool pgConStr cons
+
+
+-------------------------------------------------------------------------------
+mkSnapletPgPool :: (MonadIO (m b v), MonadSnaplet m) => m b v ConnectionPool
+mkSnapletPgPool = do
+  conf <- getSnapletUserConfig
+  mkPgPool conf
 
 
 -------------------------------------------------------------------------------
@@ -115,4 +125,17 @@ mkWord64 = fromPersistValue' . unKey
 fromPersistValue' :: PersistField c => PersistValue -> c
 fromPersistValue' = either (const $ error "Persist conversion failed") id
                     . fromPersistValue
+
+
+------------------------------------------------------------------------------
+-- | Follows a foreign key field in one entity and retrieves the corresponding
+-- entity from the database.
+followForeignKey :: (HasPersistPool m, PersistEntity a,
+                     PersistEntityBackend a ~ SqlBackend)
+                 => (t -> Key a) -> Entity t -> m (Maybe (Entity a))
+followForeignKey toKey (Entity _ val) = do
+    let key' = toKey val
+    mval <- runPersist $ DB.get key'
+    return $ fmap (Entity key') mval
+
 
