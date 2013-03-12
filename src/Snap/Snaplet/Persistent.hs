@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
@@ -5,6 +6,7 @@
 module Snap.Snaplet.Persistent where
 
 -------------------------------------------------------------------------------
+import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
@@ -34,9 +36,11 @@ class MonadIO m => HasPersistPool m where
     getPersistPool :: m ConnectionPool
 
 
+instance HasPersistPool m => HasPersistPool (NoLoggingT m) where
+    getPersistPool = runNoLoggingT getPersistPool
+
 instance HasPersistPool (Handler b PersistState) where
     getPersistPool = gets persistPool
-
 
 instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
     getPersistPool = ask
@@ -80,10 +84,11 @@ mkSnapletPgPool = do
 
 
 -------------------------------------------------------------------------------
-runPersist :: HasPersistPool m => SqlPersist (ResourceT IO) a -> m a
+runPersist :: (MonadBaseControl IO m, HasPersistPool m)
+           => SqlPersist (ResourceT m) b -> m b
 runPersist action = do
   pool <- getPersistPool
-  liftIO . runResourceT $ runSqlPool action pool
+  runResourceT $ runSqlPool action pool
 
 
 -------------------------------------------------------------------------------
@@ -130,12 +135,13 @@ fromPersistValue' = either (const $ error "Persist conversion failed") id
 ------------------------------------------------------------------------------
 -- | Follows a foreign key field in one entity and retrieves the corresponding
 -- entity from the database.
-followForeignKey :: (HasPersistPool m, PersistEntity a,
+followForeignKey :: (MonadUnsafeIO m, MonadThrow m, MonadBaseControl IO m,
+                     PersistEntity a, HasPersistPool m,
                      PersistEntityBackend a ~ SqlBackend)
                  => (t -> Key a) -> Entity t -> m (Maybe (Entity a))
 followForeignKey toKey (Entity _ val) = do
     let key' = toKey val
-    mval <- runPersist $ DB.get key'
+    mval <- runNoLoggingT $ runPersist $ DB.get key'
     return $ fmap (Entity key') mval
 
 
