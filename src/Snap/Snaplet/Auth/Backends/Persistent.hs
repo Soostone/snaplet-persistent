@@ -14,7 +14,7 @@ module Snap.Snaplet.Auth.Backends.Persistent
 ------------------------------------------------------------------------------
 import           Control.Monad
 import           Control.Monad.Logger
-import           Control.Monad.State          (liftIO)
+import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
 import qualified Data.HashMap.Strict          as HM
 import           Data.Maybe
@@ -149,9 +149,10 @@ initHelper aus l pool = liftIO $ do
 
 ------------------------------------------------------------------------------
 -- | Run a database action
-runDB :: MonadBaseControl IO m
-      => ConnectionPool -> SqlPersist (ResourceT m) a -> m a
-runDB cp f = runResourceT $ runSqlPool f cp
+runDB :: MonadIO m
+      => ConnectionPool
+      -> SqlPersist (ResourceT (NoLoggingT IO)) a -> m a
+runDB cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
 
 
 readT :: Text -> Int
@@ -178,7 +179,7 @@ instance IAuthBackend PersistAuthManager where
   save PAM{..} au@AuthUser{..} = do
     now <- liftIO getCurrentTime
     pw <- encryptPassword $ fromMaybe (ClearText "") userPassword
-    runNoLoggingT $ runDB pamPool $ do
+    runDB pamPool $ do
       case userId of
         Nothing -> do
           insert $ SnapAuthUser
@@ -230,18 +231,18 @@ instance IAuthBackend PersistAuthManager where
 
   destroy = fail "We don't allow destroying users."
 
-  lookupByUserId PAM{..} (UserId t) = runNoLoggingT $ runDB pamPool $ do
+  lookupByUserId PAM{..} (UserId t) = runDB pamPool $ do
     let k = (mkKey (readT t :: Int))
     u <- get k
     case u of
      Nothing -> return Nothing
      Just u' -> return . Just $ db2au $ Entity k u'
 
-  lookupByLogin PAM{..} login = runNoLoggingT $ runDB pamPool $ do
+  lookupByLogin PAM{..} login = runDB pamPool $ do
     res <- selectFirst [SnapAuthUserLogin ==. login] []
     return $ fmap db2au res
 
-  lookupByRememberToken PAM{..} token = runNoLoggingT $ runDB pamPool $ do
+  lookupByRememberToken PAM{..} token = runDB pamPool $ do
       res <- selectFirst [SnapAuthUserRememberToken ==. Just token] []
       return $ fmap db2au res
 

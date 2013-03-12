@@ -84,11 +84,11 @@ mkSnapletPgPool = do
 
 
 -------------------------------------------------------------------------------
-runPersist :: (MonadBaseControl IO m, HasPersistPool m)
-           => SqlPersist (ResourceT m) b -> m b
+runPersist :: (HasPersistPool m)
+           => SqlPersist (ResourceT (NoLoggingT IO)) b -> m b
 runPersist action = do
   pool <- getPersistPool
-  runResourceT $ runSqlPool action pool
+  liftIO . runNoLoggingT . runResourceT $ runSqlPool action pool
 
 
 -------------------------------------------------------------------------------
@@ -135,13 +135,12 @@ fromPersistValue' = either (const $ error "Persist conversion failed") id
 ------------------------------------------------------------------------------
 -- | Follows a foreign key field in one entity and retrieves the corresponding
 -- entity from the database.
-followForeignKey :: (MonadUnsafeIO m, MonadThrow m, MonadBaseControl IO m,
-                     PersistEntity a, HasPersistPool m,
+followForeignKey :: (PersistEntity a, HasPersistPool m,
                      PersistEntityBackend a ~ SqlBackend)
                  => (t -> Key a) -> Entity t -> m (Maybe (Entity a))
 followForeignKey toKey (Entity _ val) = do
     let key' = toKey val
-    mval <- runNoLoggingT $ runPersist $ DB.get key'
+    mval <- runPersist $ DB.get key'
     return $ fmap (Entity key') mval
 
 
