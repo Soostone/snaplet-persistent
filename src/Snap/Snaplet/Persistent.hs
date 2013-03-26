@@ -58,10 +58,10 @@ instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
 -- where migrateAll is the migration function that was auto-generated
 -- by the QQ statement in your persistent schema definition in the
 -- call to 'mkMigrate'.
-initPersist :: SqlPersist IO a -> SnapletInit b PersistState
+initPersist :: SqlPersist (NoLoggingT IO) a -> SnapletInit b PersistState
 initPersist migration = makeSnaplet "persist" description datadir $ do
     p <- mkSnapletPgPool
-    liftIO $ runSqlPool migration p
+    liftIO . runNoLoggingT $ runSqlPool migration p
     return $ PersistState p
   where
     description = "Snaplet for persistent DB library"
