@@ -23,7 +23,6 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
 import           Database.Persist
-import           Database.Persist.EntityDef
 import           Database.Persist.Postgresql
 import           Database.Persist.Quasi
 import           Database.Persist.TH          hiding (derivePersistField)
@@ -49,7 +48,7 @@ import           Web.ClientSession            (getKey)
 -- > share [mkMigrate "migrateAll"] $
 -- >    authEntityDefs ++
 -- >    $(persistFileWith lowerCaseSettings "schema.txt")
-authEntityDefs :: [EntityDef]
+authEntityDefs :: [EntityDef SqlType]
 authEntityDefs = $(persistFileWith lowerCaseSettings "schema.txt")
 
 
@@ -151,7 +150,7 @@ initHelper aus l pool = liftIO $ do
 -- | Run a database action
 runDB :: MonadIO m
       => ConnectionPool
-      -> SqlPersist (ResourceT (NoLoggingT IO)) a -> m a
+      -> SqlPersistT (ResourceT (NoLoggingT IO)) a -> m a
 runDB cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
 
 
