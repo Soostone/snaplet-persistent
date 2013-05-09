@@ -29,21 +29,20 @@ import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
-import           Data.ByteString (ByteString)
+import           Data.ByteString              (ByteString)
 import           Data.Configurator
 import           Data.Configurator.Types
 import           Data.Maybe
 import           Data.Readable
-import           Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as T
 import           Data.Word
-import           Database.Persist.GenericSql.Raw
-import           Database.Persist.Postgresql hiding (get)
-import qualified Database.Persist.Postgresql as DB
-import           Database.Persist.Store
-import           Snap.Snaplet
+import           Database.Persist
+import           Database.Persist.Postgresql  hiding (get)
+import qualified Database.Persist.Postgresql  as DB
 import           Paths_snaplet_persistent
+import           Snap.Snaplet
 -------------------------------------------------------------------------------
 
 
@@ -76,11 +75,11 @@ instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
 -- Example:
 --
 -- > initPersist (runMigrationUnsafe migrateAll)
--- 
+--
 -- where migrateAll is the migration function that was auto-generated
 -- by the QQ statement in your persistent schema definition in the
 -- call to 'mkMigrate'.
-initPersist :: SqlPersist (NoLoggingT IO) a -> SnapletInit b PersistState
+initPersist :: SqlPersistT (NoLoggingT IO) a -> SnapletInit b PersistState
 initPersist migration = makeSnaplet "persist" description datadir $ do
     p <- mkSnapletPgPool
     liftIO . runNoLoggingT $ runSqlPool migration p
@@ -110,7 +109,9 @@ mkSnapletPgPool = do
 -------------------------------------------------------------------------------
 -- | Runs a SqlPersist action in any monad with a HasPersistPool instance.
 runPersist :: (HasPersistPool m)
-           => SqlPersist (ResourceT (NoLoggingT IO)) b -> m b
+           => SqlPersistT (ResourceT (NoLoggingT IO)) b
+           -- ^ Run given Persistent action in the defined monad.
+           -> m b
 runPersist action = do
   pool <- getPersistPool
   withPool pool action
