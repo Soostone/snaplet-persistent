@@ -8,14 +8,27 @@
 
 
 module Snap.Snaplet.Auth.Backends.Persistent
-    ( module Snap.Snaplet.Auth.Backends.Persistent
+--    ( module Snap.Snaplet.Auth.Backends.Persistent
+    ( PersistAuthManager
+    , initPersistAuthManager
+    , initPersistAuthManager'
+    , authEntityDefs
+
+    -- * Persistent Auth Data Types
+    -- $datatypes
+    , module Snap.Snaplet.Auth.Backends.Persistent.Types
+--    , SnapAuthUserGeneric(..)
+--    , SnapAuthUser
+--    , SnapAuthUserId
+    , db2au
+    , dbUserSplices
+    , userDBKey
+    , textPassword
     ) where
 
 ------------------------------------------------------------------------------
 import           Control.Monad
-import           Control.Monad.Logger
 import           Control.Monad.Trans
-import           Control.Monad.Trans.Resource
 import qualified Data.HashMap.Strict          as HM
 import           Data.Maybe
 import           Data.Text                    (Text)
@@ -36,6 +49,7 @@ import           Snap.Snaplet.Persistent
 import           Snap.Snaplet.Session
 import           Web.ClientSession            (getKey)
 ------------------------------------------------------------------------------
+import           Snap.Snaplet.Auth.Backends.Persistent.Types 
 
 
 ------------------------------------------------------------------------------
@@ -53,13 +67,15 @@ authEntityDefs :: [EntityDef]
 authEntityDefs = $(persistFileWith lowerCaseSettings "schema.txt")
 
 
-share [mkPersist sqlSettings, mkMigrate "migrateAuth"]
-      $(persistFileWith lowerCaseSettings "schema.txt")
+-- $datatypes
+--
+-- Persistent creates its own data types mirroring the database schema, so we
+-- have to export this extra layer of types and conversion to 'AuthUser'.
 
 
 ------------------------------------------------------------------------------
 -- | Function to convert a 'SnapAuthUser' entity into the auth snaplet's
--- AuthUser type.
+-- 'AuthUser'.
 db2au :: Entity SnapAuthUser -> AuthUser
 db2au (Entity (Key k) SnapAuthUser{..}) = AuthUser
   { userId               = Just . UserId . fromPersistValue' $ k
@@ -147,14 +163,6 @@ initHelper aus l pool = liftIO $ do
 
 
 
-------------------------------------------------------------------------------
--- | Run a database action
-runDB :: MonadIO m
-      => ConnectionPool
-      -> SqlPersist (ResourceT (NoLoggingT IO)) a -> m a
-runDB cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
-
-
 readT :: Text -> Int
 readT = readNote "Can't read text" . T.unpack
 
@@ -179,7 +187,7 @@ instance IAuthBackend PersistAuthManager where
   save PAM{..} au@AuthUser{..} = do
     now <- liftIO getCurrentTime
     pw <- encryptPassword $ fromMaybe (ClearText "") userPassword
-    runDB pamPool $ do
+    withPool pamPool $ do
       case userId of
         Nothing -> do
           insert $ SnapAuthUser
@@ -231,18 +239,18 @@ instance IAuthBackend PersistAuthManager where
 
   destroy = fail "We don't allow destroying users."
 
-  lookupByUserId PAM{..} (UserId t) = runDB pamPool $ do
+  lookupByUserId PAM{..} (UserId t) = withPool pamPool $ do
     let k = (mkKey (readT t :: Int))
     u <- get k
     case u of
      Nothing -> return Nothing
      Just u' -> return . Just $ db2au $ Entity k u'
 
-  lookupByLogin PAM{..} login = runDB pamPool $ do
+  lookupByLogin PAM{..} login = withPool pamPool $ do
     res <- selectFirst [SnapAuthUserLogin ==. login] []
     return $ fmap db2au res
 
-  lookupByRememberToken PAM{..} token = runDB pamPool $ do
+  lookupByRememberToken PAM{..} token = withPool pamPool $ do
       res <- selectFirst [SnapAuthUserRememberToken ==. Just token] []
       return $ fmap db2au res
 

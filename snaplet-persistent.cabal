@@ -1,10 +1,9 @@
 name:           snaplet-persistent
 version:        0.1
 synopsis:       persistent snaplet for the Snap Framework
-description:    This snaplet contains support for using the Postgresql
-                database with a Snap Framework application via the
-                persistent package.  It also includes an
-                authentication backend.
+description:    Snaplet support for using the Postgresql database
+                with a Snap Framework application via the persistent
+                package.  It also includes an authentication backend.
 license:        BSD3
 license-file:   LICENSE
 author:         Soostone Inc. Ozgun Ataman, Doug Beardsley
@@ -33,6 +32,7 @@ Library
     Snap.Snaplet.Auth.Backends.Persistent
 
   other-modules:
+    Snap.Snaplet.Auth.Backends.Persistent.Types 
     Paths_snaplet_persistent
 
   build-depends:

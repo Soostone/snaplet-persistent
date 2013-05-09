@@ -11,35 +11,36 @@ import           Control.Monad.Trans
 import           Control.Monad.Trans.Reader
 import           Control.Monad.State
 import           Data.ByteString (ByteString)
-import           Data.Lens.Template
+import           Control.Lens
 import           Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Time.Clock
-import qualified Database.PostgreSQL.Simple as P
+import qualified Database.Persist as P
+import           Database.Persist.GenericSql
 import           Snap
 import           Snap.Snaplet.Auth
-import           Snap.Snaplet.Auth.Backends.PostgresqlSimple
+import           Snap.Snaplet.Auth.Backends.Persistent
 import           Snap.Snaplet.Heist
-import           Snap.Snaplet.PostgresqlSimple
+import           Snap.Snaplet.Persistent
 import           Snap.Snaplet.Session
 import           Snap.Snaplet.Session.Backends.CookieSession
 import           Snap.Util.FileServe
-import           Text.Templating.Heist
+import           Heist
 import           Text.XmlHtml hiding (render)
 
 
 ------------------------------------------------------------------------------
 data App = App
     { _sess :: Snaplet SessionManager
-    , _db :: Snaplet Postgres
+    , _db   :: Snaplet PersistState
     , _auth :: Snaplet (AuthManager App)
     }
 
-makeLens ''App
+makeLenses ''App
 
-instance HasPostgres (Handler b App) where
-    getPostgresState = with db get
+instance HasPersistPool (Handler b App) where
+    getPersistPool = with db getPersistPool
 
 ------------------------------------------------------------------------------
 -- | The application's routes.
@@ -50,8 +51,8 @@ routes = [ ("/",            writeText "hello")
          ]
 
 fooHandler = do
-    results <- query_ "select * from snap_auth_user"
-    liftIO $ print (results :: [AuthUser])
+    results <- runPersist $ P.selectList [] []
+    liftIO $ print (map db2au results)
 
 addHandler = do
     mname <- getParam "uname"
@@ -65,8 +66,9 @@ app :: SnapletInit App App
 app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     s <- nestSnaplet "" sess $
          initCookieSessionManager "site_key.txt" "_cookie" Nothing
-    d <- nestSnaplet "db" db pgsInit
-    a <- nestSnaplet "auth" auth $ initPostgresAuth sess d
+    d <- nestSnaplet "db" db $ initPersist (runMigrationUnsafe migrateAuth)
+    a <- nestSnaplet "auth" auth $
+           initPersistAuthManager sess (persistPool $ view snapletValue d)
     addRoutes routes
     return $ App s d a
 
