@@ -17,7 +17,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Time.Clock
 import qualified Database.Persist as P
-import           Database.Persist.GenericSql
+import           Database.Persist.Sql
 import           Snap
 import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Auth.Backends.Persistent

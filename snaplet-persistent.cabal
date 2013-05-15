@@ -22,7 +22,7 @@ data-files:
 
 source-repository head
   type:     git
-  location: https://github.com/mightybyte/snaplet-persistent.git
+  location: https://github.com/soostone/snaplet-persistent.git
 
 Library
   hs-source-dirs: src
