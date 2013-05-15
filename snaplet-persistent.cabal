@@ -10,7 +10,7 @@ author:         Soostone Inc. Ozgun Ataman, Doug Beardsley
 maintainer:     ozataman@gmail.com, mightybyte@gmail.com
 build-type:     Simple
 cabal-version:  >= 1.6
-homepage:       https://github.com/mightybyte/snaplet-persistent
+homepage:       https://github.com/soostone/snaplet-persistent
 category:       Web, Snap
 
 extra-source-files:  LICENSE
