@@ -39,6 +39,7 @@ import           Database.Persist
 import           Database.Persist.Postgresql
 import           Database.Persist.Quasi
 import           Database.Persist.TH          hiding (derivePersistField)
+import           Heist
 import           Heist.Compiled
 import           Paths_snaplet_persistent
 import           Safe
@@ -105,8 +106,8 @@ db2au (Entity (Key k) SnapAuthUser{..}) = AuthUser
 -- | Splices for 'SnapAuthUser' that are equivalent to the ones for
 -- 'AuthUser'.
 dbUserSplices :: Monad n
-              => [(Text, Promise (Entity SnapAuthUser) -> Splice n)]
-dbUserSplices = repromise (return . db2au) userCSplices
+              => Splices (RuntimeSplice n (Entity SnapAuthUser) -> Splice n)
+dbUserSplices = mapS (deferMap (return . db2au)) userCSplices
 
 
 data PersistAuthManager = PAM {
