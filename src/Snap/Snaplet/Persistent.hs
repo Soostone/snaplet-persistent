@@ -153,7 +153,7 @@ mkWord64 = fromPersistValue' . unKey
 
 
 -------------------------------------------------------------------------------
--- Converts a PersistValue to a more concrete type.  Calls error if the
+-- | Converts a PersistValue to a more concrete type.  Calls error if the
 -- conversion fails.
 fromPersistValue' :: PersistField c => PersistValue -> c
 fromPersistValue' = either (const $ error "Persist conversion failed") id
