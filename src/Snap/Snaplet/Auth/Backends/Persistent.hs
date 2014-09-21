@@ -27,22 +27,22 @@ module Snap.Snaplet.Auth.Backends.Persistent
     ) where
 
 ------------------------------------------------------------------------------
-import           Control.Monad
-import           Control.Monad.Trans
+import           Control.Monad                (liftM)
+import           Control.Monad.Trans          (liftIO)
 import qualified Data.HashMap.Strict          as HM
-import           Data.Maybe
+import           Data.Maybe                   (fromMaybe, catMaybes)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
-import           Data.Time
-import           Database.Persist
-import           Database.Persist.Postgresql
-import           Database.Persist.Quasi
+import           Data.Time                    (UTCTime, getCurrentTime)
+import           Database.Persist             ()
+import           Database.Persist.Sql
+import           Database.Persist.Quasi       (lowerCaseSettings)
 import           Database.Persist.TH          hiding (derivePersistField)
-import           Heist
-import           Heist.Compiled
-import           Paths_snaplet_persistent
-import           Safe
+import           Heist                        
+import           Heist.Compiled               (Splice, deferMap)
+import           Paths_snaplet_persistent     (getDataDir)
+import           Safe                         (readNote)
 import           Snap.Snaplet
 import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Persistent
@@ -190,7 +190,7 @@ instance IAuthBackend PersistAuthManager where
     withPool pamPool $ do
       case userId of
         Nothing -> do
-          insert $ SnapAuthUser
+          _ <- insert $ SnapAuthUser
             userLogin
             (fromMaybe "" userEmail)
             (textPassword pw)
