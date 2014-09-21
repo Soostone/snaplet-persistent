@@ -3,3 +3,4 @@
 *.o
 dist
 TAGS
+cabal.sandbox.config
