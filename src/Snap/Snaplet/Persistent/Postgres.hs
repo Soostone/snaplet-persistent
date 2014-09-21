@@ -42,7 +42,7 @@ import           Snap.Snaplet.Persistent
 --
 -- Example:
 --
--- > initPersist (runMigrationUnsafe migrateAll)
+-- > initPersistPg (runMigrationUnsafe migrateAll)
 --
 -- where migrateAll is the migration function that was auto-generated
 -- by the QQ statement in your persistent schema definition in the
