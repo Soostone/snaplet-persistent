@@ -58,7 +58,7 @@ app :: SnapletInit App App
 app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     s <- nestSnaplet "" sess $
          initCookieSessionManager "site_key.txt" "_cookie" Nothing
-    d <- nestSnaplet "db" db $ initPersistSqliteWith ":memory:" 1 (runMigrationUnsafe migrateAuth)
+    d <- nestSnaplet "db" db $ initPersistSqliteWith "./auth.db" 1 (runMigrationUnsafe migrateAuth)
     a <- nestSnaplet "auth" auth $
            initPersistAuthManager sess (persistPool $ view snapletValue d)
     addRoutes routes

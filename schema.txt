@@ -2,18 +2,18 @@ SnapAuthUser
   login Text 
   email Text default=''
   password Text
-  activatedAt UTCTime Maybe default=now()
-  suspendedAt UTCTime Maybe default=now()
+  activatedAt UTCTime Maybe default=CURRENT_TIMESTAMP
+  suspendedAt UTCTime Maybe default=CURRENT_TIMESTAMP
   rememberToken Text Maybe
   loginCount Int
   failedLoginCount Int
-  lockedOutUntil UTCTime Maybe default=now()
-  currentLoginAt UTCTime Maybe default=now()
-  lastLoginAt UTCTime Maybe default=now()
+  lockedOutUntil UTCTime Maybe default=CURRENT_TIMESTAMP
+  currentLoginAt UTCTime Maybe default=CURRENT_TIMESTAMP
+  lastLoginAt UTCTime Maybe default=CURRENT_TIMESTAMP
   currentIp Text Maybe
   lastIp Text Maybe 
-  createdAt UTCTime default=now()
-  updatedAt UTCTime default=now()
+  createdAt UTCTime default=CURRENT_TIMESTAMP
+  updatedAt UTCTime default=CURRENT_TIMESTAMP
   resetToken Text Maybe
   resetRequestedAt UTCTime Maybe
   roles String
