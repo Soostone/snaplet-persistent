@@ -29,6 +29,8 @@ Library
 
   exposed-modules:
     Snap.Snaplet.Persistent
+    Snap.Snaplet.Persistent.Postgres
+    Snap.Snaplet.Persistent.Sqlite
     Snap.Snaplet.Auth.Backends.Persistent
 
   other-modules:
@@ -48,6 +50,7 @@ Library
     mtl                        >= 2       && < 3,
     persistent                 >= 1.2     && < 1.4,
     persistent-postgresql      >= 1.2     && < 1.4,
+    persistent-sqlite          >= 1.2     && < 1.4,
     persistent-template        >= 1.2     && < 1.4,
     readable                   >= 0.1     && < 0.3,
     resource-pool-catchio      >= 0.2     && < 0.3,
