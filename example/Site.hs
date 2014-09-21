@@ -22,7 +22,7 @@ import           Snap
 import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Auth.Backends.Persistent
 import           Snap.Snaplet.Heist
-import           Snap.Snaplet.Persistent
+import           Snap.Snaplet.Persistent.Postgres
 import           Snap.Snaplet.Session
 import           Snap.Snaplet.Session.Backends.CookieSession
 import           Snap.Util.FileServe
