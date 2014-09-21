@@ -24,24 +24,14 @@ module Snap.Snaplet.Persistent.Postgres
   ) where
 
 -------------------------------------------------------------------------------
-import           Control.Monad.Logger
-import           Control.Monad.State
-import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.Resource
-import           Data.ByteString              (ByteString)
-import           Data.Configurator
-import           Data.Configurator.Types
-import           Data.Maybe
-import           Data.Readable
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as T
-import           Data.Word
-import           Database.Persist
-import           Database.Persist.Postgresql  hiding (get)
+import           Control.Monad.Logger (NoLoggingT)
+import           Control.Monad.State (MonadIO, liftIO)
+import           Data.Configurator (require)
+import           Data.Configurator.Types (Config)
+import           Database.Persist (PersistEntity, PersistEntityBackend, Entity(..), Key)
+import           Database.Persist.Postgresql (SqlPersistT, ConnectionPool, SqlBackend)
 import qualified Database.Persist.Postgresql  as DB
-import           Paths_snaplet_persistent
-import           Snap.Snaplet
+import           Snap.Snaplet (SnapletInit, MonadSnaplet, getSnapletUserConfig)
 import           Snap.Snaplet.Persistent
 -------------------------------------------------------------------------------
 
@@ -66,7 +56,7 @@ mkPgPool :: MonadIO m => Config -> m ConnectionPool
 mkPgPool conf = do
   pgConStr <- liftIO $ require conf "postgre-con-str"
   cons <- liftIO $ require conf "postgre-pool-size"
-  createPostgresqlPool pgConStr cons
+  DB.createPostgresqlPool pgConStr cons
 
 
 -------------------------------------------------------------------------------

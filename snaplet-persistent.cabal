@@ -29,6 +29,7 @@ Library
 
   exposed-modules:
     Snap.Snaplet.Persistent
+    Snap.Snaplet.Persistent.Postgres
     Snap.Snaplet.Auth.Backends.Persistent
 
   other-modules:
