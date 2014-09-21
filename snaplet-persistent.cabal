@@ -32,6 +32,7 @@ Library
     Snap.Snaplet.Persistent.Postgres
     Snap.Snaplet.Persistent.Sqlite
     Snap.Snaplet.Auth.Backends.Persistent
+    Snap.Snaplet.Auth.Backends.PersistentSqlite
 
   other-modules:
     Snap.Snaplet.Auth.Backends.Persistent.Types 

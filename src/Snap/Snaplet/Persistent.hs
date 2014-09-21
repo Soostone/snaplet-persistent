@@ -5,6 +5,7 @@
 
 module Snap.Snaplet.Persistent
   ( initPersist
+  , initPersistWith
   , PersistState(..)
   , HasPersistPool(..)
   , mkSnapletPool
@@ -84,7 +85,30 @@ initPersist mkPool migration = makeSnaplet "persist" description datadir $ do
     description = "Snaplet for persistent DB library"
     datadir = Just $ liftM (++"/resources/db") getDataDir
 
+-- | Initialize Persistent with a function to create an Persistent connection
+-- pool from a connection-string and the size for the connection-pool
+-- the third parameter - an initial SQL function - is called right  after the
+-- connection pool has  been created. This is most useful for calling migrations
+-- upfront right after initialization.
+--
+-- Example:
+--
+-- > initPersist mkSnapletSqlitePoolWith ":memory:" 1 (runMigrationUnsafe migrateAll)
+--
+-- where migrateAll is the migration function that was auto-generated
+-- by the QQ statement in your persistent schema definition in the
+-- call to 'mkMigrate'.
+initPersistWith :: (Text -> Int -> Initializer b PersistState ConnectionPool) -> Text -> Int -> SqlPersistT (NoLoggingT IO) a -> SnapletInit b PersistState
+initPersistWith mkPool conStr cons migration = makeSnaplet "persist" description datadir $ do
+    p <- mkPool conStr cons
+    _ <- liftIO . runNoLoggingT $ runSqlPool migration p
+    return $ PersistState p
+  where
+    description = "Snaplet for persistent DB library"
+    datadir = Just $ liftM (++"/resources/db") getDataDir
+
 -------------------------------------------------------------------------------
+    
 -- | Conscruts a connection pool in a snaplet context.
 mkSnapletPool :: (MonadIO (m b v), MonadSnaplet m) => (Config -> m b v ConnectionPool) -> m b v ConnectionPool
 mkSnapletPool mkPool = do
