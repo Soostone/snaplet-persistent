@@ -190,7 +190,7 @@ instance IAuthBackend PersistAuthManager where
     withPool pamPool $ do
       case userId of
         Nothing -> do
-          _ <- insert $ SnapAuthUser
+          k <- insert $ SnapAuthUser
             userLogin
             (fromMaybe "" userEmail)
             (textPassword pw)
@@ -210,7 +210,7 @@ instance IAuthBackend PersistAuthManager where
             Nothing
             ""
             ""
-          return $ Right $ au {userUpdatedAt = Just now}
+          return $ Right $ au {userUpdatedAt = Just now, userId =  Just . UserId . fromPersistValue' $ unKey k }
         Just (UserId t) -> do
           let k = (mkKey (readT t :: Int))
           update k $ catMaybes
