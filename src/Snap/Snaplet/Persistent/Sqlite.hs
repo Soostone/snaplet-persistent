@@ -31,7 +31,7 @@ import           Data.Configurator.Types (Config)
 import           Database.Persist (PersistEntity, PersistEntityBackend, Key, Entity(..))
 import           Database.Persist.Sqlite (ConnectionPool, SqlBackend, SqlPersistT)
 import qualified Database.Persist.Sqlite  as DB
-import           Snap.Snaplet
+import           Snap.Snaplet (SnapletInit, MonadSnaplet, getSnapletUserConfig)
 import           Snap.Snaplet.Persistent
 -------------------------------------------------------------------------------
 
