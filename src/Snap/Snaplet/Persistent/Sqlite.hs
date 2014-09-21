@@ -24,11 +24,11 @@ module Snap.Snaplet.Persistent.Sqlite
   ) where
 
 -------------------------------------------------------------------------------
-import           Control.Monad.Logger
-import           Control.Monad.State
-import           Data.Configurator
-import           Data.Configurator.Types
-import           Database.Persist
+import           Control.Monad.Logger (NoLoggingT)
+import           Control.Monad.State (MonadIO, liftIO)
+import           Data.Configurator (require)
+import           Data.Configurator.Types (Config)
+import           Database.Persist (PersistEntity, PersistEntityBackend, Key, Entity(..))
 import           Database.Persist.Sqlite (ConnectionPool, SqlBackend, SqlPersistT)
 import qualified Database.Persist.Sqlite  as DB
 import           Snap.Snaplet
