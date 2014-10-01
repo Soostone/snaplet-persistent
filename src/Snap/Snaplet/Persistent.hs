@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Snap.Snaplet.Persistent
   ( initPersist
@@ -13,13 +14,6 @@ module Snap.Snaplet.Persistent
   , withPool
 
   -- * Utility Functions
-  , mkKey
-  , mkKeyBS
-  , mkKeyT
-  , showKey
-  , showKeyBS
-  , mkInt
-  , mkWord64
   , followForeignKey
   , fromPersistValue'
   ) where
@@ -29,15 +23,8 @@ import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
-import           Data.ByteString              (ByteString)
 import           Data.Configurator
 import           Data.Configurator.Types
-import           Data.Maybe
-import           Data.Readable
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as T
-import           Data.Word
 import           Database.Persist
 import           Database.Persist.Postgresql  hiding (get)
 import qualified Database.Persist.Postgresql  as DB
@@ -81,7 +68,9 @@ instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
 -- call to 'mkMigrate'.
 initPersist :: SqlPersistT (NoLoggingT IO) a -> SnapletInit b PersistState
 initPersist migration = makeSnaplet "persist" description datadir $ do
-    p <- mkSnapletPgPool
+    conf <- getSnapletUserConfig
+    p <- liftIO . runNoLoggingT $ mkSnapletPgPool conf
+
     liftIO . runNoLoggingT $ runSqlPool migration p
     return $ PersistState p
   where
@@ -91,20 +80,16 @@ initPersist migration = makeSnaplet "persist" description datadir $ do
 
 -------------------------------------------------------------------------------
 -- | Constructs a connection pool from Config.
-mkPgPool :: MonadIO m => Config -> m ConnectionPool
+mkPgPool :: (MonadLogger m, MonadBaseControl IO m, MonadIO m) => Config -> m ConnectionPool
 mkPgPool conf = do
   pgConStr <- liftIO $ require conf "postgre-con-str"
   cons <- liftIO $ require conf "postgre-pool-size"
   createPostgresqlPool pgConStr cons
 
-
 -------------------------------------------------------------------------------
--- | Conscruts a connection pool in a snaplet context.
-mkSnapletPgPool :: (MonadIO (m b v), MonadSnaplet m) => m b v ConnectionPool
-mkSnapletPgPool = do
-  conf <- getSnapletUserConfig
-  mkPgPool conf
-
+-- | Constructs a connection pool in a snaplet context.
+mkSnapletPgPool :: (MonadBaseControl IO m, MonadLogger m, MonadIO m) => Config -> m ConnectionPool
+mkSnapletPgPool = mkPgPool
 
 -------------------------------------------------------------------------------
 -- | Runs a SqlPersist action in any monad with a HasPersistPool instance.
@@ -121,51 +106,8 @@ runPersist action = do
 -- | Run a database action
 withPool :: MonadIO m
          => ConnectionPool
-         -> SqlPersist (ResourceT (NoLoggingT IO)) a -> m a
+         -> SqlPersistT (ResourceT (NoLoggingT IO)) a -> m a
 withPool cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
-
-
--------------------------------------------------------------------------------
--- | Make a Key from an Int.
-mkKey :: Int -> Key entity
-mkKey = Key . toPersistValue
-
-
--------------------------------------------------------------------------------
--- | Makes a Key from a ByteString.  Calls error on failure.
-mkKeyBS :: ByteString -> Key entity
-mkKeyBS = mkKey . fromMaybe (error "Can't ByteString value") . fromBS
-
-
--------------------------------------------------------------------------------
--- | Makes a Key from Text.  Calls error on failure.
-mkKeyT :: Text -> Key entity
-mkKeyT = mkKey . fromMaybe (error "Can't Text value") . fromText
-
-
--------------------------------------------------------------------------------
--- | Makes a Text representation of a Key.
-showKey :: Key e -> Text
-showKey = T.pack . show . mkInt
-
-
--------------------------------------------------------------------------------
--- | Makes a ByteString representation of a Key.
-showKeyBS :: Key e -> ByteString
-showKeyBS = T.encodeUtf8 . showKey
-
-
--------------------------------------------------------------------------------
--- | Converts a Key to Int.  Fails with error if the conversion fails.
-mkInt :: Key a -> Int
-mkInt = fromPersistValue' . unKey
-
-
--------------------------------------------------------------------------------
--- | Converts a Key to Word64.  Fails with error if the conversion fails.
-mkWord64 :: Key a -> Word64
-mkWord64 = fromPersistValue' . unKey
-
 
 -------------------------------------------------------------------------------
 -- Converts a PersistValue to a more concrete type.  Calls error if the
