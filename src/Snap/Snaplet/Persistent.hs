@@ -121,7 +121,7 @@ runPersist action = do
 -- | Run a database action
 withPool :: MonadIO m
          => ConnectionPool
-         -> SqlPersist (ResourceT (NoLoggingT IO)) a -> m a
+         -> SqlPersistT (ResourceT (NoLoggingT IO)) a -> m a
 withPool cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
 
 

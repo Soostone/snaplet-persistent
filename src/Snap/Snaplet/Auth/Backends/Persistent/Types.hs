@@ -12,7 +12,6 @@ module Snap.Snaplet.Auth.Backends.Persistent.Types where
 ------------------------------------------------------------------------------
 import           Data.Text                    (Text)
 import           Data.Time
-import           Database.Persist
 import           Database.Persist.Quasi
 import           Database.Persist.TH          hiding (derivePersistField)
 ------------------------------------------------------------------------------
