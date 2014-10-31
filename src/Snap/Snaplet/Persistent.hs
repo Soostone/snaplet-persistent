@@ -16,8 +16,7 @@ module Snap.Snaplet.Persistent
   ) where
 
 -------------------------------------------------------------------------------
-import qualified Control.Monad.Catch          as EC (Handler (..),
-                                                     MonadCatch (..))
+import           Control.Monad.Catch          as EC
 import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
@@ -28,9 +27,15 @@ import           Data.Configurator.Types
 import           Database.Persist.Postgresql  hiding (get)
 import           Database.Persist.Sql         ()
 import           Paths_snaplet_persistent
-import           Snap.Snaplet
+import           Snap.Core
+import           Snap.Snaplet                 as S
 -------------------------------------------------------------------------------
 
+instance MonadThrow Snap where
+    throwM = liftSnap . throwM
+
+instance MonadCatch Snap where
+    catch e h = liftSnap $ catch e h
 
 -------------------------------------------------------------------------------
 newtype PersistState = PersistState { persistPool :: ConnectionPool }
@@ -46,7 +51,7 @@ class MonadIO m => HasPersistPool m where
 instance HasPersistPool m => HasPersistPool (NoLoggingT m) where
     getPersistPool = runNoLoggingT getPersistPool
 
-instance HasPersistPool (Handler b PersistState) where
+instance HasPersistPool (S.Handler b PersistState) where
     getPersistPool = gets persistPool
 
 instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
@@ -92,14 +97,13 @@ mkSnapletPgPool = mkPgPool
 
 -------------------------------------------------------------------------------
 -- | Runs a SqlPersist action in any monad with a HasPersistPool instance.
-runPersist :: (HasPersistPool m, EC.MonadCatch m)
+runPersist :: (HasPersistPool m, MonadSnap m)
            => SqlPersistT (ResourceT (NoLoggingT IO)) b
            -- ^ Run given Persistent action in the defined monad.
            -> m b
 runPersist action = do
   pool <- getPersistPool
-  withPool pool action
-
+  liftSnap $ withPool pool action
 
 ------------------------------------------------------------------------------
 -- | Run a database action, if a `PersistentSqlException` is raised
