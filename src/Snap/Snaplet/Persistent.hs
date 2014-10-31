@@ -26,6 +26,7 @@ import           Data.Configurator
 import           Data.Configurator.Types
 import           Database.Persist.Postgresql  hiding (get)
 import           Database.Persist.Sql         ()
+import           Database.PostgreSQL.Simple   (SqlError (..))
 import           Paths_snaplet_persistent
 import           Snap.Core
 import           Snap.Snaplet                 as S
@@ -103,7 +104,7 @@ runPersist :: (HasPersistPool m, MonadSnap m)
            -> m b
 runPersist action = do
   pool <- getPersistPool
-  liftSnap $ withPool pool action
+  withPool pool action
 
 ------------------------------------------------------------------------------
 -- | Run a database action, if a `PersistentSqlException` is raised
@@ -113,14 +114,13 @@ runPersist action = do
 -- This is being done because sometimes Postgres will reap connections
 -- and the connection leased out of the pool may then be stale and
 -- will often times throw a `Couldn'tGetSQLConnection` type value.
-withPool :: (MonadIO m, EC.MonadCatch m)
+withPool :: (MonadIO m, MonadSnap m)
          => ConnectionPool
-         -> SqlPersistT (ResourceT (NoLoggingT IO)) a -> m a
-withPool cp f = do
-    -- TODO: `withPool` is a bad name for this, shouldn't it be
-    -- `withPG`?
-    recovering retryPolicy [isPGExc] runF
+         -> SqlPersistT (ResourceT (NoLoggingT IO)) a
+         -> m a
+withPool cp f = liftSnap . liftIO $ recovering retryPolicy [isPGExc, isPersistExc] (runF f cp)
   where
-    retryPolicy = constantDelay 50000 <> limitRetries 4
-    isPGExc _   = EC.Handler $ \(_ :: PersistentSqlException) -> return True
-    runF        = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
+    retryPolicy    = constantDelay 50000 <> limitRetries 5
+    isPersistExc _ = EC.Handler $ \(_ :: PersistentSqlException) -> return True
+    isPGExc _      = EC.Handler $ \(_ :: SqlError) -> return True
+    runF f' cp'    = liftIO . runNoLoggingT . runResourceT $ runSqlPool f' cp'
