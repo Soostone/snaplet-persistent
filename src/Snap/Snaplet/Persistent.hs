@@ -25,8 +25,6 @@ import           Control.Retry
 import           Data.Configurator
 import           Data.Configurator.Types
 import           Database.Persist.Postgresql  hiding (get)
-import           Database.Persist.Sql         ()
-import           Database.PostgreSQL.Simple   (SqlError (..))
 import           Paths_snaplet_persistent
 import           Snap.Core
 import           Snap.Snaplet                 as S
@@ -118,9 +116,7 @@ withPool :: (MonadIO m, MonadSnap m)
          => ConnectionPool
          -> SqlPersistT (ResourceT (NoLoggingT IO)) a
          -> m a
-withPool cp f = liftSnap . liftIO $ recovering retryPolicy [isPGExc, isPersistExc] (runF f cp)
+withPool cp f = liftSnap . liftIO $ recoverAll retryPolicy (runF f cp)
   where
-    retryPolicy    = constantDelay 50000 <> limitRetries 5
-    isPersistExc _ = EC.Handler $ \(_ :: PersistentSqlException) -> return True
-    isPGExc _      = EC.Handler $ \(_ :: SqlError) -> return True
-    runF f' cp'    = liftIO . runNoLoggingT . runResourceT $ runSqlPool f' cp'
+    retryPolicy = constantDelay 50000 <> limitRetries 5
+    runF f' cp' = liftIO . runNoLoggingT . runResourceT $ runSqlPool f' cp'
