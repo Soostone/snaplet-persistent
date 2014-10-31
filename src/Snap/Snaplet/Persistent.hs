@@ -13,14 +13,11 @@ module Snap.Snaplet.Persistent
   , mkSnapletPgPool
   , runPersist
   , withPool
-
-  -- * Utility Functions
-  , followForeignKey
-  , fromPersistValue'
   ) where
 
 -------------------------------------------------------------------------------
-import           Control.Exception
+import qualified Control.Monad.Catch          as EC (Handler (..),
+                                                     MonadCatch (..))
 import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
@@ -28,10 +25,8 @@ import           Control.Monad.Trans.Resource
 import           Control.Retry
 import           Data.Configurator
 import           Data.Configurator.Types
-import           Database.Persist
 import           Database.Persist.Postgresql  hiding (get)
-import qualified Database.Persist.Postgresql  as DB
-import           Database.Persist.Sql         (PersistentSqlException (..))
+import           Database.Persist.Sql         ()
 import           Paths_snaplet_persistent
 import           Snap.Snaplet
 -------------------------------------------------------------------------------
@@ -92,12 +87,12 @@ mkPgPool conf = do
 
 -------------------------------------------------------------------------------
 -- | Constructs a connection pool in a snaplet context.
-mkSnapletPgPool :: (MonadBaseControl IO m, MonadLogger m, MonadIO m) => Config -> m ConnectionPool
+mkSnapletPgPool :: (MonadBaseControl IO m, MonadLogger m, MonadIO m, EC.MonadCatch m) => Config -> m ConnectionPool
 mkSnapletPgPool = mkPgPool
 
 -------------------------------------------------------------------------------
 -- | Runs a SqlPersist action in any monad with a HasPersistPool instance.
-runPersist :: (HasPersistPool m)
+runPersist :: (HasPersistPool m, EC.MonadCatch m)
            => SqlPersistT (ResourceT (NoLoggingT IO)) b
            -- ^ Run given Persistent action in the defined monad.
            -> m b
@@ -114,32 +109,14 @@ runPersist action = do
 -- This is being done because sometimes Postgres will reap connections
 -- and the connection leased out of the pool may then be stale and
 -- will often times throw a `Couldn'tGetSQLConnection` type value.
-withPool :: MonadIO m
+withPool :: (MonadIO m, EC.MonadCatch m)
          => ConnectionPool
          -> SqlPersistT (ResourceT (NoLoggingT IO)) a -> m a
 withPool cp f = do
+    -- TODO: `withPool` is a bad name for this, shouldn't it be
+    -- `withPG`?
     recovering retryPolicy [isPGExc] runF
   where
     retryPolicy = constantDelay 50000 <> limitRetries 4
-    isPGExc _   = Handler $ \(_ :: PersistentSqlException) -> return True
+    isPGExc _   = EC.Handler $ \(_ :: PersistentSqlException) -> return True
     runF        = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
--------------------------------------------------------------------------------
--- Converts a PersistValue to a more concrete type.  Calls error if the
--- conversion fails.
-fromPersistValue' :: PersistField c => PersistValue -> c
-fromPersistValue' = either (const $ error "Persist conversion failed") id
-                    . fromPersistValue
-
-
-------------------------------------------------------------------------------
--- | Follows a foreign key field in one entity and retrieves the corresponding
--- entity from the database.
-followForeignKey :: (PersistEntity a, HasPersistPool m,
-                     PersistEntityBackend a ~ SqlBackend)
-                 => (t -> Key a) -> Entity t -> m (Maybe (Entity a))
-followForeignKey toKey (Entity _ val) = do
-    let key' = toKey val
-    mval <- runPersist $ DB.get key'
-    return $ fmap (Entity key') mval
-
-

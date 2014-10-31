@@ -43,6 +43,8 @@ Library
     errors                     >= 1.4     && < 1.5,
     MonadCatchIO-transformers  >= 0.3     && < 0.4,
     monad-logger               >= 0.2.4   && < 0.4,
+    exceptions                 >= 0.6     && < 1.0,
+    retry                      >= 0.5     && < 1.0,
     mtl                        >= 2       && < 3,
     persistent                 >= 2.0     && < 3.0,
     persistent-postgresql      >= 2.0     && < 3.0,
