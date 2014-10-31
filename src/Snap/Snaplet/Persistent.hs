@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 
 module Snap.Snaplet.Persistent
@@ -19,15 +20,18 @@ module Snap.Snaplet.Persistent
   ) where
 
 -------------------------------------------------------------------------------
+import           Control.Exception
 import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
+import           Control.Retry
 import           Data.Configurator
 import           Data.Configurator.Types
 import           Database.Persist
 import           Database.Persist.Postgresql  hiding (get)
 import qualified Database.Persist.Postgresql  as DB
+import           Database.Persist.Sql         (PersistentSqlException (..))
 import           Paths_snaplet_persistent
 import           Snap.Snaplet
 -------------------------------------------------------------------------------
@@ -103,12 +107,22 @@ runPersist action = do
 
 
 ------------------------------------------------------------------------------
--- | Run a database action
+-- | Run a database action, if a `PersistentSqlException` is raised
+-- the action will be retried four times with a 50ms delay between
+-- each retry.
+--
+-- This is being done because sometimes Postgres will reap connections
+-- and the connection leased out of the pool may then be stale and
+-- will often times throw a `Couldn'tGetSQLConnection` type value.
 withPool :: MonadIO m
          => ConnectionPool
          -> SqlPersistT (ResourceT (NoLoggingT IO)) a -> m a
-withPool cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
-
+withPool cp f = do
+    recovering retryPolicy [isPGExc] runF
+  where
+    retryPolicy = constantDelay 50000 <> limitRetries 4
+    isPGExc _   = Handler $ \(_ :: PersistentSqlException) -> return True
+    runF        = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
 -------------------------------------------------------------------------------
 -- Converts a PersistValue to a more concrete type.  Calls error if the
 -- conversion fails.
