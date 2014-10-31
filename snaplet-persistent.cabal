@@ -29,10 +29,8 @@ Library
 
   exposed-modules:
     Snap.Snaplet.Persistent
-    Snap.Snaplet.Auth.Backends.Persistent
 
   other-modules:
-    Snap.Snaplet.Auth.Backends.Persistent.Types 
     Paths_snaplet_persistent
 
   build-depends:
@@ -45,15 +43,18 @@ Library
     errors                     >= 1.4     && < 1.5,
     MonadCatchIO-transformers  >= 0.3     && < 0.4,
     monad-logger               >= 0.2.4   && < 0.4,
+    exceptions                 >= 0.6     && < 1.0,
+    retry                      >= 0.5     && < 1.0,
     mtl                        >= 2       && < 3,
-    persistent                 >= 1.2     && < 1.4,
-    persistent-postgresql      >= 1.2     && < 1.4,
-    persistent-template        >= 1.2     && < 1.4,
+    persistent                 >= 2.0     && < 3.0,
+    persistent-postgresql      >= 2.0     && < 3.0,
+    persistent-template        >= 2.0     && < 3.0,
     readable                   >= 0.1     && < 0.3,
     resource-pool-catchio      >= 0.2     && < 0.3,
     resourcet                  >= 0.4     && < 1.2,
     safe                       >= 0.3     && < 0.4,
     snap                       >= 0.13    && < 0.14,
+    snap-core                  >= 0.9     && < 1.0,
     text                       >= 0.11    && < 1.2,
     time                       >= 1.1     && < 1.5,
     transformers               >= 0.2     && < 0.5,

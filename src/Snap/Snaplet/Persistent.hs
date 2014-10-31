@@ -1,7 +1,9 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Snap.Snaplet.Persistent
   ( initPersist
@@ -11,40 +13,28 @@ module Snap.Snaplet.Persistent
   , mkSnapletPgPool
   , runPersist
   , withPool
-
-  -- * Utility Functions
-  , mkKey
-  , mkKeyBS
-  , mkKeyT
-  , showKey
-  , showKeyBS
-  , mkInt
-  , mkWord64
-  , followForeignKey
-  , fromPersistValue'
   ) where
 
 -------------------------------------------------------------------------------
+import           Control.Monad.Catch          as EC
 import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
-import           Data.ByteString              (ByteString)
+import           Control.Retry
 import           Data.Configurator
 import           Data.Configurator.Types
-import           Data.Maybe
-import           Data.Readable
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as T
-import           Data.Word
-import           Database.Persist
 import           Database.Persist.Postgresql  hiding (get)
-import qualified Database.Persist.Postgresql  as DB
 import           Paths_snaplet_persistent
-import           Snap.Snaplet
+import           Snap.Core
+import           Snap.Snaplet                 as S
 -------------------------------------------------------------------------------
 
+instance MonadThrow Snap where
+    throwM = liftSnap . throwM
+
+instance MonadCatch Snap where
+    catch e h = liftSnap $ catch e h
 
 -------------------------------------------------------------------------------
 newtype PersistState = PersistState { persistPool :: ConnectionPool }
@@ -60,7 +50,7 @@ class MonadIO m => HasPersistPool m where
 instance HasPersistPool m => HasPersistPool (NoLoggingT m) where
     getPersistPool = runNoLoggingT getPersistPool
 
-instance HasPersistPool (Handler b PersistState) where
+instance HasPersistPool (S.Handler b PersistState) where
     getPersistPool = gets persistPool
 
 instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
@@ -81,7 +71,9 @@ instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
 -- call to 'mkMigrate'.
 initPersist :: SqlPersistT (NoLoggingT IO) a -> SnapletInit b PersistState
 initPersist migration = makeSnaplet "persist" description datadir $ do
-    p <- mkSnapletPgPool
+    conf <- getSnapletUserConfig
+    p <- liftIO . runNoLoggingT $ mkSnapletPgPool conf
+
     liftIO . runNoLoggingT $ runSqlPool migration p
     return $ PersistState p
   where
@@ -91,24 +83,20 @@ initPersist migration = makeSnaplet "persist" description datadir $ do
 
 -------------------------------------------------------------------------------
 -- | Constructs a connection pool from Config.
-mkPgPool :: MonadIO m => Config -> m ConnectionPool
+mkPgPool :: (MonadLogger m, MonadBaseControl IO m, MonadIO m) => Config -> m ConnectionPool
 mkPgPool conf = do
   pgConStr <- liftIO $ require conf "postgre-con-str"
   cons <- liftIO $ require conf "postgre-pool-size"
   createPostgresqlPool pgConStr cons
 
-
 -------------------------------------------------------------------------------
--- | Conscruts a connection pool in a snaplet context.
-mkSnapletPgPool :: (MonadIO (m b v), MonadSnaplet m) => m b v ConnectionPool
-mkSnapletPgPool = do
-  conf <- getSnapletUserConfig
-  mkPgPool conf
-
+-- | Constructs a connection pool in a snaplet context.
+mkSnapletPgPool :: (MonadBaseControl IO m, MonadLogger m, MonadIO m, EC.MonadCatch m) => Config -> m ConnectionPool
+mkSnapletPgPool = mkPgPool
 
 -------------------------------------------------------------------------------
 -- | Runs a SqlPersist action in any monad with a HasPersistPool instance.
-runPersist :: (HasPersistPool m)
+runPersist :: (HasPersistPool m, MonadSnap m)
            => SqlPersistT (ResourceT (NoLoggingT IO)) b
            -- ^ Run given Persistent action in the defined monad.
            -> m b
@@ -116,74 +104,19 @@ runPersist action = do
   pool <- getPersistPool
   withPool pool action
 
-
 ------------------------------------------------------------------------------
--- | Run a database action
-withPool :: MonadIO m
+-- | Run a database action, if a `PersistentSqlException` is raised
+-- the action will be retried four times with a 50ms delay between
+-- each retry.
+--
+-- This is being done because sometimes Postgres will reap connections
+-- and the connection leased out of the pool may then be stale and
+-- will often times throw a `Couldn'tGetSQLConnection` type value.
+withPool :: (MonadIO m, MonadSnap m)
          => ConnectionPool
-         -> SqlPersist (ResourceT (NoLoggingT IO)) a -> m a
-withPool cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
-
-
--------------------------------------------------------------------------------
--- | Make a Key from an Int.
-mkKey :: Int -> Key entity
-mkKey = Key . toPersistValue
-
-
--------------------------------------------------------------------------------
--- | Makes a Key from a ByteString.  Calls error on failure.
-mkKeyBS :: ByteString -> Key entity
-mkKeyBS = mkKey . fromMaybe (error "Can't ByteString value") . fromBS
-
-
--------------------------------------------------------------------------------
--- | Makes a Key from Text.  Calls error on failure.
-mkKeyT :: Text -> Key entity
-mkKeyT = mkKey . fromMaybe (error "Can't Text value") . fromText
-
-
--------------------------------------------------------------------------------
--- | Makes a Text representation of a Key.
-showKey :: Key e -> Text
-showKey = T.pack . show . mkInt
-
-
--------------------------------------------------------------------------------
--- | Makes a ByteString representation of a Key.
-showKeyBS :: Key e -> ByteString
-showKeyBS = T.encodeUtf8 . showKey
-
-
--------------------------------------------------------------------------------
--- | Converts a Key to Int.  Fails with error if the conversion fails.
-mkInt :: Key a -> Int
-mkInt = fromPersistValue' . unKey
-
-
--------------------------------------------------------------------------------
--- | Converts a Key to Word64.  Fails with error if the conversion fails.
-mkWord64 :: Key a -> Word64
-mkWord64 = fromPersistValue' . unKey
-
-
--------------------------------------------------------------------------------
--- Converts a PersistValue to a more concrete type.  Calls error if the
--- conversion fails.
-fromPersistValue' :: PersistField c => PersistValue -> c
-fromPersistValue' = either (const $ error "Persist conversion failed") id
-                    . fromPersistValue
-
-
-------------------------------------------------------------------------------
--- | Follows a foreign key field in one entity and retrieves the corresponding
--- entity from the database.
-followForeignKey :: (PersistEntity a, HasPersistPool m,
-                     PersistEntityBackend a ~ SqlBackend)
-                 => (t -> Key a) -> Entity t -> m (Maybe (Entity a))
-followForeignKey toKey (Entity _ val) = do
-    let key' = toKey val
-    mval <- runPersist $ DB.get key'
-    return $ fmap (Entity key') mval
-
-
+         -> SqlPersistT (ResourceT (NoLoggingT IO)) a
+         -> m a
+withPool cp f = liftSnap . liftIO $ recoverAll retryPolicy (runF f cp)
+  where
+    retryPolicy = constantDelay 50000 <> limitRetries 5
+    runF f' cp' = liftIO . runNoLoggingT . runResourceT $ runSqlPool f' cp'
