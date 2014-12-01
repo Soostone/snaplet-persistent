@@ -13,7 +13,8 @@ cabal-version:  >= 1.6
 homepage:       https://github.com/soostone/snaplet-persistent
 category:       Web, Snap
 
-extra-source-files:  LICENSE
+extra-source-files:  LICENSE,
+                     CHANGELOG.md
 
 data-files:
   schema.txt
