@@ -107,7 +107,7 @@ db2au (Entity (Key k) SnapAuthUser{..}) = AuthUser
 -- 'AuthUser'.
 dbUserSplices :: Monad n
               => Splices (RuntimeSplice n (Entity SnapAuthUser) -> Splice n)
-dbUserSplices = mapS (deferMap (return . db2au)) userCSplices
+dbUserSplices = mapV (deferMap (return . db2au)) userCSplices
 
 
 data PersistAuthManager = PAM {
