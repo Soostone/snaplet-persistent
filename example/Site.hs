@@ -6,28 +6,18 @@
 module Main where
 
 ------------------------------------------------------------------------------
-import           Control.Applicative
 import           Control.Monad.Trans
-import           Control.Monad.Trans.Reader
-import           Control.Monad.State
 import           Data.ByteString (ByteString)
 import           Control.Lens
-import           Data.Maybe
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import           Data.Time.Clock
 import qualified Database.Persist as P
 import           Database.Persist.Sql
 import           Snap
 import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Auth.Backends.Persistent
-import           Snap.Snaplet.Heist
-import           Snap.Snaplet.Persistent
+import           Snap.Snaplet.Persistent.Postgres
 import           Snap.Snaplet.Session
 import           Snap.Snaplet.Session.Backends.CookieSession
-import           Snap.Util.FileServe
-import           Heist
-import           Text.XmlHtml hiding (render)
 
 
 ------------------------------------------------------------------------------
@@ -50,10 +40,12 @@ routes = [ ("/",            writeText "hello")
          , ("add/:uname", addHandler)
          ]
 
+fooHandler :: Handler App App ()
 fooHandler = do
     results <- runPersist $ P.selectList [] []
     liftIO $ print (map db2au results)
 
+addHandler :: Handler App App ()
 addHandler = do
     mname <- getParam "uname"
     let name = maybe "guest" T.decodeUtf8 mname
@@ -66,7 +58,7 @@ app :: SnapletInit App App
 app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     s <- nestSnaplet "" sess $
          initCookieSessionManager "site_key.txt" "_cookie" Nothing
-    d <- nestSnaplet "db" db $ initPersist (runMigrationUnsafe migrateAuth)
+    d <- nestSnaplet "db" db $ initPersistPg (runMigrationUnsafe migrateAuth)
     a <- nestSnaplet "auth" auth $
            initPersistAuthManager sess (persistPool $ view snapletValue d)
     addRoutes routes

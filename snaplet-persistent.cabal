@@ -30,6 +30,7 @@ Library
 
   exposed-modules:
     Snap.Snaplet.Persistent
+    Snap.Snaplet.Persistent.Postgres
     Snap.Snaplet.Auth.Backends.Persistent
 
   other-modules:
@@ -44,6 +45,7 @@ Library
     heist                      >= 0.14    && < 0.15,
     lens                       >= 3.7.6   && < 4.5,
     errors                     >= 1.4     && < 1.5,
+    map-syntax                 == 0.2.*,
     MonadCatchIO-transformers  >= 0.3     && < 0.4,
     monad-logger               >= 0.2.4   && < 0.4,
     mtl                        >= 2       && < 3,
