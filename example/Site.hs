@@ -6,9 +6,14 @@
 module Main where
 
 ------------------------------------------------------------------------------
+<<<<<<< HEAD
 import           Control.Applicative((<$>))
 import           Control.Monad.Trans
 import           Data.ByteString (ByteString, append)
+=======
+import           Control.Monad.Trans
+import           Data.ByteString (ByteString)
+>>>>>>> master
 import           Control.Lens
 import qualified Data.Text.Encoding as T
 import qualified Database.Persist as P
@@ -16,7 +21,11 @@ import           Database.Persist.Sql
 import           Snap
 import           Snap.Snaplet.Auth (AuthManager, currentUser, createUser, userLogin, forceLogin)
 import           Snap.Snaplet.Auth.Backends.Persistent
+<<<<<<< HEAD
 import           Snap.Snaplet.Persistent.Sqlite
+=======
+import           Snap.Snaplet.Persistent.Postgres
+>>>>>>> master
 import           Snap.Snaplet.Session
 import           Snap.Snaplet.Session.Backends.CookieSession
 
@@ -41,12 +50,15 @@ routes = [ ("/", rootHandler)
          , ("add/:uname", addHandler)
          ]
 
+<<<<<<< HEAD
 rootHandler :: Handler App App ()
 rootHandler = do
   user <- with auth $ currentUser
   maybe
     (writeBS "no user logged in")
     (writeBS . ("current user: " `append`) . T.encodeUtf8 . userLogin) user
+=======
+>>>>>>> master
 fooHandler :: Handler App App ()
 fooHandler = do
     results <- runPersist $ P.selectList [] []
