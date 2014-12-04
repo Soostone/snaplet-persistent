@@ -5,6 +5,7 @@
 
 module Snap.Snaplet.Persistent
   ( initPersist
+  , initPersistGeneric
   , PersistState(..)
   , HasPersistPool(..)
   , mkPgPool
@@ -33,6 +34,7 @@ import           Data.ByteString              (ByteString)
 import           Data.Configurator
 import           Data.Configurator.Types
 import           Data.Maybe
+import           Data.Pool
 import           Data.Readable
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
@@ -80,8 +82,29 @@ instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
 -- by the QQ statement in your persistent schema definition in the
 -- call to 'mkMigrate'.
 initPersist :: SqlPersistT (NoLoggingT IO) a -> SnapletInit b PersistState
-initPersist migration = makeSnaplet "persist" description datadir $ do
-    p <- mkSnapletPgPool
+initPersist = initPersistGeneric mkSnapletPgPool
+
+
+-------------------------------------------------------------------------------
+-- | Backend-agnostic initalization with an initial SQL function called right
+-- after the connection pool has been created. This is most useful for
+-- calling migrations upfront right after initialization.
+--
+-- Example:
+--
+-- > initPersist mkPool (runMigrationUnsafe migrateAll)
+--
+-- where migrateAll is the migration function that was auto-generated
+-- by the QQ statement in your persistent schema definition in the
+-- call to 'mkMigrate'.
+--
+-- mkPool is a function to construct a pool of connections to your database
+initPersistGeneric
+    :: Initializer b PersistState (Pool Connection)
+    -> SqlPersistT (NoLoggingT IO) a
+    -> SnapletInit b PersistState
+initPersistGeneric mkPool migration = makeSnaplet "persist" description datadir $ do
+    p <- mkPool
     liftIO . runNoLoggingT $ runSqlPool migration p
     return $ PersistState p
   where
