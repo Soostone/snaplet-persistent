@@ -119,7 +119,10 @@ initPersistGeneric mkPool migration = makeSnaplet "persist" description datadir 
 
 -------------------------------------------------------------------------------
 -- | Constructs a connection pool from Config.
-mkPgPool :: (MonadBaseControl IO m, MonadLogger m, MonadIO m) => Config -> m ConnectionPool
+mkPgPool
+    :: (MonadBaseControl IO m, MonadLogger m, MonadIO m)
+    => Config
+    -> m ConnectionPool
 mkPgPool conf = do
   pgConStr <- liftIO $ require conf "postgre-con-str"
   cons <- liftIO $ require conf "postgre-pool-size"
