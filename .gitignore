@@ -1,4 +1,6 @@
 *.swp
+.cabal-sandbox
+cabal.sandbox.config
 *.hi
 *.o
 dist

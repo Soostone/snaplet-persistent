@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Snap.Snaplet.Persistent
   ( initPersist
@@ -81,7 +82,11 @@ instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
 -- where migrateAll is the migration function that was auto-generated
 -- by the QQ statement in your persistent schema definition in the
 -- call to 'mkMigrate'.
-initPersist :: SqlPersistT (NoLoggingT IO) a -> SnapletInit b PersistState
+initPersist
+    :: ( MonadLogger (Initializer b PersistState)
+       , MonadBaseControl IO (Initializer b PersistState))
+    => SqlPersistT (NoLoggingT IO) a
+    -> SnapletInit b PersistState
 initPersist = initPersistGeneric mkSnapletPgPool
 
 
@@ -114,7 +119,7 @@ initPersistGeneric mkPool migration = makeSnaplet "persist" description datadir 
 
 -------------------------------------------------------------------------------
 -- | Constructs a connection pool from Config.
-mkPgPool :: MonadIO m => Config -> m ConnectionPool
+mkPgPool :: (MonadBaseControl IO m, MonadLogger m, MonadIO m) => Config -> m ConnectionPool
 mkPgPool conf = do
   pgConStr <- liftIO $ require conf "postgre-con-str"
   cons <- liftIO $ require conf "postgre-pool-size"
@@ -123,7 +128,9 @@ mkPgPool conf = do
 
 -------------------------------------------------------------------------------
 -- | Conscruts a connection pool in a snaplet context.
-mkSnapletPgPool :: (MonadIO (m b v), MonadSnaplet m) => m b v ConnectionPool
+mkSnapletPgPool
+    :: (MonadBaseControl IO (m b v), MonadLogger (m b v), MonadIO (m b v), MonadSnaplet m)
+    => m b v ConnectionPool
 mkSnapletPgPool = do
   conf <- getSnapletUserConfig
   mkPgPool conf
@@ -150,44 +157,44 @@ withPool cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
 
 -------------------------------------------------------------------------------
 -- | Make a Key from an Int.
-mkKey :: Int -> Key entity
-mkKey = Key . toPersistValue
+mkKey :: ToBackendKey SqlBackend entity => Int -> Key entity
+mkKey = fromBackendKey . SqlBackendKey . fromIntegral
 
 
 -------------------------------------------------------------------------------
 -- | Makes a Key from a ByteString.  Calls error on failure.
-mkKeyBS :: ByteString -> Key entity
+mkKeyBS :: ToBackendKey SqlBackend entity => ByteString -> Key entity
 mkKeyBS = mkKey . fromMaybe (error "Can't ByteString value") . fromBS
 
 
 -------------------------------------------------------------------------------
 -- | Makes a Key from Text.  Calls error on failure.
-mkKeyT :: Text -> Key entity
+mkKeyT :: ToBackendKey SqlBackend entity => Text -> Key entity
 mkKeyT = mkKey . fromMaybe (error "Can't Text value") . fromText
 
 
 -------------------------------------------------------------------------------
 -- | Makes a Text representation of a Key.
-showKey :: Key e -> Text
+showKey :: ToBackendKey SqlBackend e => Key e -> Text
 showKey = T.pack . show . mkInt
 
 
 -------------------------------------------------------------------------------
 -- | Makes a ByteString representation of a Key.
-showKeyBS :: Key e -> ByteString
+showKeyBS :: ToBackendKey SqlBackend e => Key e -> ByteString
 showKeyBS = T.encodeUtf8 . showKey
 
 
 -------------------------------------------------------------------------------
 -- | Converts a Key to Int.  Fails with error if the conversion fails.
-mkInt :: Key a -> Int
-mkInt = fromPersistValue' . unKey
+mkInt :: ToBackendKey SqlBackend a => Key a -> Int
+mkInt = fromIntegral . unSqlBackendKey . toBackendKey
 
 
 -------------------------------------------------------------------------------
 -- | Converts a Key to Word64.  Fails with error if the conversion fails.
-mkWord64 :: Key a -> Word64
-mkWord64 = fromPersistValue' . unKey
+mkWord64 :: ToBackendKey SqlBackend a => Key a -> Word64
+mkWord64 = fromIntegral . unSqlBackendKey . toBackendKey
 
 
 -------------------------------------------------------------------------------

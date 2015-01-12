@@ -1,19 +1,21 @@
-{-# LANGUAGE EmptyDataDecls    #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 
 module Snap.Snaplet.Auth.Backends.Persistent.Types where
 
 ------------------------------------------------------------------------------
-import           Data.Text                    (Text)
+import           Data.Text              (Text)
 import           Data.Time
 import           Database.Persist.Quasi
-import           Database.Persist.TH          hiding (derivePersistField)
+import           Database.Persist.TH    hiding (derivePersistField)
 ------------------------------------------------------------------------------
 
 

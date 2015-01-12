@@ -29,16 +29,16 @@ module Snap.Snaplet.Auth.Backends.Persistent
 ------------------------------------------------------------------------------
 import           Control.Monad
 import           Control.Monad.Trans
-import qualified Data.HashMap.Strict          as HM
+import qualified Data.HashMap.Strict                         as HM
 import           Data.Maybe
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as T
+import           Data.Text                                   (Text)
+import qualified Data.Text                                   as T
+import qualified Data.Text.Encoding                          as T
 import           Data.Time
 import           Database.Persist
 import           Database.Persist.Postgresql
 import           Database.Persist.Quasi
-import           Database.Persist.TH          hiding (derivePersistField)
+import           Database.Persist.TH                         hiding (derivePersistField)
 import           Heist
 import           Heist.Compiled
 import           Paths_snaplet_persistent
@@ -47,9 +47,9 @@ import           Snap.Snaplet
 import           Snap.Snaplet.Auth
 import           Snap.Snaplet.Persistent
 import           Snap.Snaplet.Session
-import           Web.ClientSession            (getKey)
+import           Web.ClientSession                           (getKey)
 ------------------------------------------------------------------------------
-import           Snap.Snaplet.Auth.Backends.Persistent.Types 
+import           Snap.Snaplet.Auth.Backends.Persistent.Types
 
 
 ------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ import           Snap.Snaplet.Auth.Backends.Persistent.Types
 -- > share [mkMigrate "migrateAll"] $
 -- >    authEntityDefs ++
 -- >    $(persistFileWith lowerCaseSettings "schema.txt")
-authEntityDefs :: [EntityDef SqlType]
+authEntityDefs :: [EntityDef]
 authEntityDefs = $(persistFileWith lowerCaseSettings "schema.txt")
 
 
@@ -77,8 +77,8 @@ authEntityDefs = $(persistFileWith lowerCaseSettings "schema.txt")
 -- | Function to convert a 'SnapAuthUser' entity into the auth snaplet's
 -- 'AuthUser'.
 db2au :: Entity SnapAuthUser -> AuthUser
-db2au (Entity (Key k) SnapAuthUser{..}) = AuthUser
-  { userId               = Just . UserId . fromPersistValue' $ k
+db2au (Entity k SnapAuthUser{..}) = AuthUser
+  { userId               = Just . UserId $ showKey k
   , userLogin            = snapAuthUserLogin
   , userEmail            = Just snapAuthUserEmail
   , userPassword         = Just . Encrypted . T.encodeUtf8
