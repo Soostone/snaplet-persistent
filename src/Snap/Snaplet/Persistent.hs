@@ -82,11 +82,7 @@ instance MonadIO m => HasPersistPool (ReaderT ConnectionPool m) where
 -- where migrateAll is the migration function that was auto-generated
 -- by the QQ statement in your persistent schema definition in the
 -- call to 'mkMigrate'.
-initPersist
-    :: ( MonadLogger (Initializer b PersistState)
-       , MonadBaseControl IO (Initializer b PersistState))
-    => SqlPersistT (NoLoggingT IO) a
-    -> SnapletInit b PersistState
+initPersist :: SqlPersistT (NoLoggingT IO) a -> SnapletInit b PersistState
 initPersist = initPersistGeneric mkSnapletPgPool
 
 
@@ -105,12 +101,12 @@ initPersist = initPersistGeneric mkSnapletPgPool
 --
 -- mkPool is a function to construct a pool of connections to your database
 initPersistGeneric
-    :: Initializer b PersistState (Pool Connection)
+    :: Initializer b PersistState (Pool SqlBackend)
     -> SqlPersistT (NoLoggingT IO) a
     -> SnapletInit b PersistState
 initPersistGeneric mkPool migration = makeSnaplet "persist" description datadir $ do
     p <- mkPool
-    liftIO . runNoLoggingT $ runSqlPool migration p
+    _ <- liftIO $ runNoLoggingT $ runSqlPool migration p
     return $ PersistState p
   where
     description = "Snaplet for persistent DB library"
@@ -119,21 +115,16 @@ initPersistGeneric mkPool migration = makeSnaplet "persist" description datadir 
 
 -------------------------------------------------------------------------------
 -- | Constructs a connection pool from Config.
-mkPgPool
-    :: (MonadBaseControl IO m, MonadLogger m, MonadIO m)
-    => Config
-    -> m ConnectionPool
+mkPgPool :: MonadIO m => Config -> m ConnectionPool
 mkPgPool conf = do
   pgConStr <- liftIO $ require conf "postgre-con-str"
   cons <- liftIO $ require conf "postgre-pool-size"
-  createPostgresqlPool pgConStr cons
+  liftIO . runNoLoggingT $ createPostgresqlPool pgConStr cons
 
 
 -------------------------------------------------------------------------------
 -- | Conscruts a connection pool in a snaplet context.
-mkSnapletPgPool
-    :: (MonadBaseControl IO (m b v), MonadLogger (m b v), MonadIO (m b v), MonadSnaplet m)
-    => m b v ConnectionPool
+mkSnapletPgPool :: (MonadIO (m b v), MonadSnaplet m) => m b v ConnectionPool
 mkSnapletPgPool = do
   conf <- getSnapletUserConfig
   mkPgPool conf
