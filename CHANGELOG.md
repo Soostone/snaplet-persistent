@@ -1,3 +1,12 @@
+# 0.5
+
+* Upgrade to persistent 2
+* Accept newer versions of other deps
+
+# 0.4.1
+
+* Add initPersistGeneric
+
 # 0.4
 
 * Update heist dependency to 0.14
