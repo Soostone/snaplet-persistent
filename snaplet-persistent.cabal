@@ -42,7 +42,7 @@ Library
     clientsession              >= 0.7.2   && < 0.10,
     configurator               >= 0.2     && < 0.4,
     heist                      >= 0.14    && < 0.15,
-    lens                       >= 3.7.6   && < 4.7,
+    lens                       >= 3.7.6   && < 4.9,
     errors                     >= 1.4     && < 1.5,
     MonadCatchIO-transformers  >= 0.3     && < 0.4,
     monad-logger               >= 0.2.4   && < 0.4,
