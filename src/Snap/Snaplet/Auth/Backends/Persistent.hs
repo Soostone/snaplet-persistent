@@ -30,6 +30,7 @@ module Snap.Snaplet.Auth.Backends.Persistent
 import           Control.Monad
 import           Control.Monad.Trans
 import qualified Data.HashMap.Strict                         as HM
+import qualified Data.Map.Syntax                             as MS
 import           Data.Maybe
 import           Data.Text                                   (Text)
 import qualified Data.Text                                   as T
@@ -107,7 +108,7 @@ db2au (Entity k SnapAuthUser{..}) = AuthUser
 -- 'AuthUser'.
 dbUserSplices :: Monad n
               => Splices (RuntimeSplice n (Entity SnapAuthUser) -> Splice n)
-dbUserSplices = mapV (deferMap (return . db2au)) userCSplices
+dbUserSplices = MS.mapV (deferMap (return . db2au)) userCSplices
 
 
 data PersistAuthManager = PAM {
@@ -171,7 +172,7 @@ readT = readNote "Can't read text" . T.unpack
 -- | Get the db key from an 'AuthUser'
 userDBKey :: AuthUser -> Maybe SnapAuthUserId
 userDBKey au = case userId au of
-                 Nothing -> Nothing
+                 Nothing         -> Nothing
                  Just (UserId k) -> Just . mkKey $ (readT k :: Int)
 
 
