@@ -25,6 +25,10 @@ source-repository head
   type:     git
   location: https://github.com/soostone/snaplet-persistent.git
 
+flag lib-Werror
+  default: False
+  manual: True
+
 Library
   hs-source-dirs: src
 
@@ -63,3 +67,6 @@ Library
 
   ghc-options: -Wall -fwarn-tabs -funbox-strict-fields
                -fno-warn-orphans -fno-warn-unused-do-bind
+
+  if flag(lib-Werror)
+    ghc-options: -Werror
