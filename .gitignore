@@ -6,3 +6,5 @@ cabal.sandbox.config
 dist
 TAGS
 .stack-work
+*.dyn_hi
+*.dyn_o

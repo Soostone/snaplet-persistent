@@ -65,7 +65,7 @@ addHandler = do
 app :: SnapletInit App App
 app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     s <- nestSnaplet "" sess $
-         initCookieSessionManager "site_key.txt" "_cookie" Nothing
+         initCookieSessionManager "site_key.txt" "_cookie" Nothing Nothing
     d <- nestSnaplet "db" db $ initPersist (runMigrationUnsafe migrateAuth)
     a <- nestSnaplet "auth" auth $
            initPersistAuthManager sess (persistPool $ view snapletValue d)

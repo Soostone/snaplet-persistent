@@ -32,6 +32,7 @@ script:
   - stack $ARGS setup
   - stack $ARGS test --no-terminal --haddock --no-haddock-deps
   - stack $ARGS build
+  - stack $ARGS exec -- ghc --make example/Site.hs -Wall -Werror -o /dev/null
   - stack $ARGS sdist
 
 # Caching so the next build will be fast too.
