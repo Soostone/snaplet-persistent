@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Soostone/snaplet-persistent.svg?branch=master)](https://travis-ci.org/Soostone/snaplet-persistent)
+
 This package makes it easier to integrate your snap applications with databases
 using persistent. It also includes a backend for the auth snaplet defining how
 users should be stored in your database.
