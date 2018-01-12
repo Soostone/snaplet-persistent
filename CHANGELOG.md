@@ -1,3 +1,6 @@
+# 0.5.1
+* Allow for newer dependencies.
+
 # 0.5
 
 * Upgrade to persistent 2
