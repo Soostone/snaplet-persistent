@@ -133,7 +133,7 @@ mkSnapletPgPool = do
 -------------------------------------------------------------------------------
 -- | Runs a SqlPersist action in any monad with a HasPersistPool instance.
 runPersist :: (HasPersistPool m)
-           => SqlPersistT (ResourceT (NoLoggingT IO)) b
+           => SqlPersistM b
            -- ^ Run given Persistent action in the defined monad.
            -> m b
 runPersist action = do
@@ -145,8 +145,8 @@ runPersist action = do
 -- | Run a database action
 withPool :: MonadIO m
          => ConnectionPool
-         -> SqlPersistT (ResourceT (NoLoggingT IO)) a -> m a
-withPool cp f = liftIO . runNoLoggingT . runResourceT $ runSqlPool f cp
+         -> SqlPersistM a -> m a
+withPool cp f = liftIO . runResourceT . runNoLoggingT $ runSqlPool f cp
 
 
 -------------------------------------------------------------------------------
