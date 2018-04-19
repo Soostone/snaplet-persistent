@@ -5,6 +5,7 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE CPP #-}
 
 
 module Snap.Snaplet.Auth.Backends.Persistent
@@ -256,3 +257,8 @@ instance IAuthBackend PersistAuthManager where
       res <- selectFirst [SnapAuthUserRememberToken ==. Just token] []
       return $ fmap db2au res
 
+#if MIN_VERSION_snap(1,1,0)
+  lookupByEmail PAM{..} email = withPool pamPool $ do
+    res <- selectFirst [SnapAuthUserEmail ==. email] []
+    return $ fmap db2au res
+#endif
