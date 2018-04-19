@@ -1,3 +1,7 @@
+# 0.6.0
+* Switch the transformer order to align with persistent's SqlPersistM.
+* Allow for newer versions of snap and other dependencies.
+
 # 0.5.1
 * Allow for newer dependencies.
 
