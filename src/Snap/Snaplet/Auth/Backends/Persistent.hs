@@ -240,7 +240,7 @@ instance IAuthBackend PersistAuthManager where
           return $ Right $ au {userUpdatedAt = Just now}
 
 
-  destroy = fail "We don't allow destroying users."
+  destroy _ _ = fail "We don't allow destroying users."
 
   lookupByUserId PAM{..} (UserId t) = withPool pamPool $ do
     let k = (mkKey (readT t :: Int))
