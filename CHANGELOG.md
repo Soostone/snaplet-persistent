@@ -1,3 +1,7 @@
+# 0.6.1
+* Add some extensions for persistent >= 2.10.5 (#21)
+* Drop support for GHC 8.0.2 and lower
+
 # 0.6.0
 * Switch the transformer order to align with persistent's SqlPersistM.
 * Allow for newer versions of snap and other dependencies.
