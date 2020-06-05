@@ -8,3 +8,4 @@ TAGS
 .stack-work
 *.dyn_hi
 *.dyn_o
+stack.yaml.lock
