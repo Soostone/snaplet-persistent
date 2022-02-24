@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE FlexibleContexts           #-}
