@@ -40,6 +40,7 @@ import           Data.Time
 import           Database.Persist
 import           Database.Persist.Postgresql
 import           Database.Persist.Quasi
+import           Database.Persist.Quasi.Internal
 import           Database.Persist.TH                         hiding (derivePersistField)
 import           Heist
 import           Heist.Compiled
@@ -65,7 +66,7 @@ import           Snap.Snaplet.Auth.Backends.Persistent.Types
 -- > share [mkMigrate "migrateAll"] $
 -- >    authEntityDefs ++
 -- >    $(persistFileWith lowerCaseSettings "schema.txt")
-authEntityDefs :: [EntityDef]
+authEntityDefs :: [UnboundEntityDef]
 authEntityDefs = $(persistFileWith lowerCaseSettings "schema.txt")
 
 
