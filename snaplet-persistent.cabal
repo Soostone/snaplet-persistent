@@ -52,7 +52,7 @@ Library
     errors                     >= 1.4,
     monad-logger               >= 0.2.4,
     mtl                        >= 2,
-    persistent                 >= 2.0,
+    persistent                 >= 2.13,
     persistent-postgresql      >= 2.0,
     persistent-template        >= 2.0,
     readable                   >= 0.1,
