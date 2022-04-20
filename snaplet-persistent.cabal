@@ -1,5 +1,5 @@
 name:           snaplet-persistent
-version:        0.7.0
+version:        0.7.1
 synopsis:       persistent snaplet for the Snap Framework
 description:    Snaplet support for using the Postgresql database
                 with a Snap Framework application via the persistent

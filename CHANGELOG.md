@@ -1,5 +1,8 @@
+# 0.7.1
+* Updates for newer versions of persistent (#22)
+
 # 0.7.0
-* Updates for newer versions of persistent (#23)
+* Updates for newer versions of persistent (#22)
 
 # 0.6.1
 * Add some extensions for persistent >= 2.10.5 (#21)
