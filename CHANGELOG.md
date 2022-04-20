@@ -1,3 +1,6 @@
+# 0.7.0
+* Updates for newer versions of persistent (#23)
+
 # 0.6.1
 * Add some extensions for persistent >= 2.10.5 (#21)
 * Drop support for GHC 8.0.2 and lower
