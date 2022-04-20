@@ -1,4 +1,4 @@
-resolver: lts-11.5
+resolver: lts-14.27
 packages:
   - '.'
 extra-deps:
@@ -9,6 +9,9 @@ extra-deps:
   - blaze-html-0.9.1.2
   - blaze-markup-0.8.2.5
   - pwstore-fast-2.4.4
+  - lift-type-0.1.0.1
+  - persistent-2.13.3.5
+  - persistent-postgresql-2.13.5.0
 flags:
   snaplet-persistent:
     lib-Werror: true
