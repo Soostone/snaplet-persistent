@@ -31,6 +31,9 @@ import           Control.Monad.Logger
 import           Control.Monad.State
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class
 import           Data.ByteString              (ByteString)
 import           Data.Configurator
 import           Data.Configurator.Types
